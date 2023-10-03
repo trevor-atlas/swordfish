@@ -24,8 +24,34 @@ function App(props) {
       <div class="details-container">
         <div class="result-container">
           <ul>
-            <li>one</li>
-            <li>two</li>
+            <li class="active">
+              <span class="result-heading">Exodia</span>
+              <span class="result-subtext">The forbidden one</span>
+            </li>
+            <li>
+              <span class="result-heading">Aqua Teen Hunger Force</span>
+              <span class="result-subtext">Look at him and tell me there's a god</span>
+            </li>
+            <li>
+              <span class="result-heading">Ted Lasso</span>
+              <span class="result-subtext">Decent until season three, then bad</span>
+            </li>
+            <li>
+              <span class="result-heading">Sublime Text</span>
+              <span class="result-subtext">OG hacker tool</span>
+            </li>
+            <li>
+              <span class="result-heading">pkgx</span>
+              <span class="result-subtext">run stuff</span>
+            </li>
+            <li>
+              <span class="result-heading">Neovim</span>
+              <span class="result-subtext">Great example of how an application should be extensible</span>
+            </li>
+            <li>
+              <span class="result-heading">Tauri</span>
+              <span class="result-subtext">Make cross-platform apps great again</span>
+            </li>
           </ul>
         </div>
         <div class="preview-container">
