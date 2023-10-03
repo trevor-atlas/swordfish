@@ -20,3 +20,15 @@ This template should help get you started developing with Tauri, Solid and Types
 - Control media players
 - Customizable UI via css
 
+## Contribution guide
+
+The Rules
+1. Be patient. No matter what.
+2. Don’t badmouth: Assign responsibility, not blame.
+3. Never assume the motives of others are, to them, any less noble than yours are to you.
+4. Expect no more of anyone than you can deliver yourself.
+5. Laugh at yourself frequently.
+6. Concern yourself with what is right rather than who is right.
+7. Never forget that, no matter how certain, you might be wrong.
+8. Praise at least as often as you disparage.
+9. Admit your errors freely and soon.
