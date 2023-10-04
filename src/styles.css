@@ -22,7 +22,7 @@ body {
   --secondary-search-color: rgba(255, 255, 255, 0.5);
   --primary-search-background: #304053;
   --secondary-search-background: rgba(0, 0, 0, 0.1);
-  --highlight-border-width: 2px;
+  --highlight-border-width: 4px;
   --radius: 4px;
 
   font-family: "Inter", Avenir, Helvetica, Arial, sans-serif;
@@ -61,6 +61,21 @@ ul {
   color: var(--primary-seach-color);
   padding: 0;
   background: rgba(255, 255, 255, 0.1);
+  user-select: none;
+  -webkit-user-select: none;
+
+  &::after {
+    display: block;
+    content: '';
+    width: 80px;
+    height: 4px;
+    background-color: rgba(255,255,255,.2);
+    position: absolute;
+    pointer-events: none;
+    top: 4px;
+    left: calc(50% - 40px);
+    border-radius: 2px;
+  }
 }
 
 .search-input-container {
@@ -69,11 +84,12 @@ ul {
   /* justify-content: center; */
   /* align-items: center; */
   /* padding-left: 1.25rem; */
+  user-select: none;
+  padding: 1rem;
 }
 
 .search-input {
   /* background-color: inherit; */
-  padding: 1rem;
   border: 0;
   display: block;
   width: 100%;
@@ -81,6 +97,7 @@ ul {
   font-family: inherit;
   color: inherit;
   margin: 0;
+  padding: 0;
   background-color: transparent;
 }
 
@@ -122,7 +139,7 @@ ul {
 
 .result-container li {
   list-style: none;
-  padding: 1rem 0.5rem;
+  padding: 1rem;
   font-size: 1.25rem;
   width: 100%;
   font-family: inherit;
@@ -134,15 +151,17 @@ ul {
 .result-container .result-heading {
   font-size: 1rem;
   color: var(--primary-seach-color);
-  margin-bottom: 0rem;
+  margin: 0;
+  padding: 0;
   display: block;
   line-height: 1;
 }
 
 .result-container .result-subtext {
   margin: 0;
+  padding: 0;
   line-height: 1;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: var(--secondary-search-color);
   white-space: nowrap;
   overflow: hidden;
@@ -182,7 +201,7 @@ ul {
   animation-name: shimmer;
   animation-timing-function: linear;
   background: #ddd;
-  background: linear-gradient(to right, #f6f6f6 8%, #f0f0f0 18%, #f6f6f6 33%);
+  background: linear-gradient(to right, rgba(255,255,255,0.1) 8%, rgba(255,255,255,0.2) 18%, rgba(255,255,255,0.1) 33%);
   background-size: 1200px 100%;
 }
 
@@ -197,9 +216,9 @@ ul {
 
 @keyframes shimmer {
   0% {
-    background-position: -1200px 0;
+    background-position: -100% 0;
   }
   100% {
-    background-position: 1200px 0;
+    background-position: 100% 0;
   }
 }

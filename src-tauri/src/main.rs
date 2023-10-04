@@ -23,7 +23,7 @@ struct Query {
     kind: QueryType,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 struct QueryResult {
     heading: String,
     subheading: String,
@@ -37,7 +37,7 @@ fn getResults(query: Query) -> Vec<QueryResult> {
             subheading: "The forbidden one".to_string(),
         },
         QueryResult {
-            heading: "Drew Barrimore".to_string(),
+            heading: "Halle Berry".to_string(),
             subheading: "Still hot tbh".to_string(),
         },
         QueryResult {
@@ -61,6 +61,14 @@ fn getResults(query: Query) -> Vec<QueryResult> {
             subheading: "Nerds are so rude".to_string(),
         },
     ]
+    .iter()
+    .cloned()
+    .filter(|item| {
+        item.heading
+            .to_lowercase()
+            .contains(&query.search_string.to_lowercase())
+    })
+    .collect()
 }
 
 const WIDTH: f64 = 750.0;
@@ -78,7 +86,7 @@ fn main() {
                 WindowUrl::App("index.html".into()),
             )
             .title("Swordfish")
-            // .decorations(false)
+            .decorations(false)
             .visible(true)
             .transparent(true)
             .disable_file_drop_handler()

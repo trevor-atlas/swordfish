@@ -7,20 +7,19 @@ async function getData(query: string): Promise<any[]> {
   const data = await invoke<any[]>("getResults", {
     query: { search_string: query, kind: "Placeholder" },
   });
-  await new Promise((res) => setTimeout(res, 100000));
   return data;
 }
 
 const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
     {() => (
-      <span
+      <div
         class="shimmerBG"
         style={{
           width: "100%",
           height: "5rem",
         }}
-      ></span>
+      />
     )}
   </For>
 );
@@ -34,7 +33,7 @@ function App() {
 
   return (
     <div ref={ref} class="search-container draggable-area">
-      <div class="search-input-container">
+      <div class="search-input-container" data-tauri-drag-region>
         <input
           ref={inputRef}
           autofocus={true}
