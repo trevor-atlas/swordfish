@@ -1,8 +1,9 @@
-lockfileVersion: 5.4
+lockfileVersion: 5.3
 
 specifiers:
   '@tauri-apps/api': ^1.4.0
   '@tauri-apps/cli': ^1.4.0
+  prettier: ^3.0.3
   solid-js: ^1.7.8
   typescript: ^5.0.2
   vite: ^4.4.4
@@ -14,6 +15,7 @@ dependencies:
 
 devDependencies:
   '@tauri-apps/cli': 1.4.0
+  prettier: 3.0.3
   typescript: 5.2.2
   vite: 4.4.9
   vite-plugin-solid: 2.7.0_solid-js@1.7.12+vite@4.4.9
@@ -786,6 +788,7 @@ packages:
 
   /csstype/3.1.2:
     resolution: {integrity: sha512-I7K1Uu0MBPzaFKg4nI5Q7Vs2t+3gWWW648spaF+Rg7pI9ds18Ugn+lvg4SHczUdKlHI5LWBXyqfS8+DufyBsgQ==}
+    dev: false
 
   /debug/4.3.4:
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
@@ -931,6 +934,12 @@ packages:
       source-map-js: 1.0.2
     dev: true
 
+  /prettier/3.0.3:
+    resolution: {integrity: sha512-L/4pUDMxcNa8R/EthV08Zt42WBO4h1rarVtK0K+QJG0X187OLo7l699jWw0GKuwzkPQ//jMFA/8Xm6Fh3J/DAg==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dev: true
+
   /rollup/3.29.3:
     resolution: {integrity: sha512-T7du6Hum8jOkSWetjRgbwpM6Sy0nECYrYRSmZjayFcOddtKJWU4d17AC3HNUk7HRuqy4p+G7aEZclSHytqUmEg==}
     engines: {node: '>=14.18.0', npm: '>=8.0.0'}
@@ -947,12 +956,14 @@ packages:
   /seroval/0.5.1:
     resolution: {integrity: sha512-ZfhQVB59hmIauJG5Ydynupy8KHyr5imGNtdDhbZG68Ufh1Ynkv9KOYOAABf71oVbQxJ8VkWnMHAjEHE7fWkH5g==}
     engines: {node: '>=10'}
+    dev: false
 
   /solid-js/1.7.12:
     resolution: {integrity: sha512-QoyoOUKu14iLoGxjxWFIU8+/1kLT4edQ7mZESFPonsEXZ//VJtPKD8Ud1aTKzotj+MNWmSs9YzK6TdY+fO9Eww==}
     dependencies:
       csstype: 3.1.2
       seroval: 0.5.1
+    dev: false
 
   /solid-refresh/0.5.3_solid-js@1.7.12:
     resolution: {integrity: sha512-Otg5it5sjOdZbQZJnvo99TEBAr6J7PQ5AubZLNU6szZzg3RQQ5MX04oteBIIGDs0y2Qv8aXKm9e44V8z+UnFdw==}
