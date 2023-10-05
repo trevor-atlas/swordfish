@@ -1,7 +1,11 @@
 import { For, Show, createResource, createSignal, onMount } from 'solid-js';
 import { invoke } from '@tauri-apps/api/tauri';
-import { register } from '@tauri-apps/api/globalShortcut';
 import { emit, listen } from '@tauri-apps/api/event';
+import { register } from '@tauri-apps/api/globalShortcut';
+import { isRegistered } from '@tauri-apps/api/globalShortcut';
+import { unregister } from '@tauri-apps/api/globalShortcut';
+import { unregisterAll } from '@tauri-apps/api/globalShortcut';
+await unregisterAll();
 
 import './App.css';
 import SearchResult from './SearchResult';
@@ -18,14 +22,6 @@ type Query = {
   search_string: string;
   mode: keyof typeof QueryMode;
 };
-
-await register('CommandOrControl+Shift+C', () => {
-  console.log('Shortcut triggered');
-});
-
-const unlisten = listen('keypress', (event) => {
-  console.log(event);
-});
 
 async function getData(query: Query): Promise<any[]> {
   const data = await invoke<any[]>('get_query_result', {
@@ -48,11 +44,28 @@ const loadingState = (
   </For>
 );
 
+// (async () => {
+//   // const exists = await isRegistered('ESC');
+//   // console.log({ exists });
+//   // if (!exists) {
+//   await register('ESCAPE', () => {
+//     console.log('Esc Shortcut triggered');
+//   });
+//   await register('CommandOrControl+Shift+C', () => {
+//     console.log('Shortcut triggered');
+//   });
+//   // }
+// })();
+
 function App() {
   const [input, setInput] = createSignal('');
   const [mode, setMode] = createSignal(QueryMode.Files);
   const query = () => ({ search_string: input(), mode: mode() });
   const [data] = createResource<any[], Query>(query, getData);
+
+  const unlisten = listen('keypress', (event) => {
+    console.log(event);
+  });
 
   let ref;
   let inputRef;

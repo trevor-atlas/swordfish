@@ -7,15 +7,15 @@
     "errno": "ENOENT",
     "syscall": "spawn",
     "file": "sh",
-    "pkgid": "meteor-app@0.0.0",
+    "pkgid": "swordfish@0.0.0",
     "stage": "start",
     "script": "vite",
-    "pkgname": "meteor-app",
+    "pkgname": "swordfish",
     "err": {
       "name": "pnpm",
-      "message": "meteor-app@0.0.0 start: `vite`\nspawn ENOENT",
+      "message": "swordfish@0.0.0 start: `vite`\nspawn ENOENT",
       "code": "ELIFECYCLE",
-      "stack": "pnpm: meteor-app@0.0.0 start: `vite`\nspawn ENOENT\n    at ChildProcess.<anonymous> (/snapshot/dist/pnpm.cjs)\n    at ChildProcess.emit (events.js:376:20)\n    at maybeClose (internal/child_process.js:1055:16)\n    at Process.ChildProcess._handle.onexit (internal/child_process.js:288:5)"
+      "stack": "pnpm: swordfish@0.0.0 start: `vite`\nspawn ENOENT\n    at ChildProcess.<anonymous> (/snapshot/dist/pnpm.cjs)\n    at ChildProcess.emit (events.js:376:20)\n    at maybeClose (internal/child_process.js:1055:16)\n    at Process.ChildProcess._handle.onexit (internal/child_process.js:288:5)"
     }
   },
   "2 warn pnpm:global": " Local package.json exists, but node_modules missing, did you mean to install?"

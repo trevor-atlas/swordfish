@@ -1,5 +1,5 @@
 [package]
-name = "meteor-app"
+name = "swordfish"
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -13,7 +13,7 @@ edition = "2021"
 tauri-build = { version = "1.4", features = [] }
 
 [dependencies]
-tauri = { version = "1.4", features = [ "global-shortcut-all", "window-all", "macos-private-api", "shell-open"] }
+tauri = { version = "1.4", features = [ "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

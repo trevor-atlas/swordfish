@@ -5,11 +5,7 @@ use serde::{Deserialize, Serialize};
 // #[cfg(target_os = "macos")]
 // #[macro_use]
 // extern crate objc;
-use global_hotkey::{
-    hotkey::{Code, HotKey, Modifiers},
-    GlobalHotKeyManager,
-};
-use tauri::{Manager, WindowBuilder, WindowUrl};
+use tauri::{utils::config::WindowUrl, window::WindowBuilder, App, GlobalShortcutManager, Manager};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -88,12 +84,32 @@ const WIDTH: f64 = 750.0;
 const HEIGHT: f64 = 500.0;
 
 fn main() {
-    let manager = GlobalHotKeyManager::new().unwrap();
-    let hotkey = HotKey::new(Some(Modifiers::SHIFT), Code::KeyD);
-    manager.register(hotkey);
     let _app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![greet, get_query_result])
         .setup(move |app| {
+            let mut shortcut = app.global_shortcut_manager();
+            let handle = app.app_handle().clone();
+            let core_shortcut = shortcut.register("Esc", move || {
+                if let Some(w) = handle.get_window("Swordfish") {
+                    match w.is_visible() {
+                        Ok(bool) => {
+                            if bool {
+                                w.hide();
+                                ()
+                            } else {
+                                w.show();
+                                w.set_focus();
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+            });
+
+            if let Err(e) = core_shortcut {
+                println!("Error registering global shortcut: {}", e);
+            }
+
             let window = WindowBuilder::new(
                 app,
                 "Swordfish".to_string(),
