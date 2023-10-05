@@ -13,16 +13,25 @@ This template should help get you started developing with Tauri, Solid and Types
   - Tasks can be defined via a json file in ~/.config/swordfish, or an alfred-like GUI
   - there is a task std lib for js and go
 - exposes internals as CLI api
-  - cli autocompletes task names `swordfish run ta...`
 
+  - cli autocompletes task names `swordfish run ta...`
 
 - Search and preview files, browser history, docs etc
 - Control media players
 - Customizable UI via css
 
+## Technical goals
+
+- Performance is king. If we can't find a way to do it performantly, we shouldn't do it.
+- JS should not do any operations that are worse than O(n) by default.
+- The JS side should remain a dumb client that consumes data from the rust backend and displays it.
+- The app should be configurable via javascript, much like Neovim is configurable via Lua.
+- The defaults should be great, and easily overrideable
+
 ## Contribution guide
 
 The Rules
+
 1. Be patient. No matter what.
 2. Don’t badmouth: Assign responsibility, not blame.
 3. Never assume the motives of others are, to them, any less noble than yours are to you.

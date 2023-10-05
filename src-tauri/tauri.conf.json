@@ -11,10 +11,13 @@
     "version": "0.0.0"
   },
   "tauri": {
-  "macOSPrivateApi": true,
+    "macOSPrivateApi": true,
     "allowlist": {
       "all": false,
-       "window": {
+      "globalShortcut": {
+        "all": true
+      },
+      "window": {
         "all": true,
         "create": true,
         "center": true,

@@ -1,11 +1,35 @@
-import { For, Show, createResource, createSignal, onMount } from "solid-js";
-import { invoke } from "@tauri-apps/api/tauri";
-import "./App.css";
-import SearchResult from "./SearchResult";
+import { For, Show, createResource, createSignal, onMount } from 'solid-js';
+import { invoke } from '@tauri-apps/api/tauri';
+import { register } from '@tauri-apps/api/globalShortcut';
+import { emit, listen } from '@tauri-apps/api/event';
 
-async function getData(query: string): Promise<any[]> {
-  const data = await invoke<any[]>("getResults", {
-    query: { search_string: query, kind: "Placeholder" },
+import './App.css';
+import SearchResult from './SearchResult';
+
+const QueryMode = {
+  Clipboard: 'Clipboard',
+  BrowserHistory: 'BrowserHistory',
+  Files: 'Files',
+  Scripts: 'Scripts',
+  Chat: 'Chat',
+} as const;
+
+type Query = {
+  search_string: string;
+  mode: keyof typeof QueryMode;
+};
+
+await register('CommandOrControl+Shift+C', () => {
+  console.log('Shortcut triggered');
+});
+
+const unlisten = listen('keypress', (event) => {
+  console.log(event);
+});
+
+async function getData(query: Query): Promise<any[]> {
+  const data = await invoke<any[]>('get_query_result', {
+    query,
   });
   return data;
 }
@@ -16,8 +40,8 @@ const loadingState = (
       <div
         class="shimmerBG"
         style={{
-          width: "100%",
-          height: "5rem",
+          width: '100%',
+          height: '5rem',
         }}
       />
     )}
@@ -25,8 +49,10 @@ const loadingState = (
 );
 
 function App() {
-  const [input, setInput] = createSignal("");
-  const [data] = createResource<any[], string>(input, getData);
+  const [input, setInput] = createSignal('');
+  const [mode, setMode] = createSignal(QueryMode.Files);
+  const query = () => ({ search_string: input(), mode: mode() });
+  const [data] = createResource<any[], Query>(query, getData);
 
   let ref;
   let inputRef;

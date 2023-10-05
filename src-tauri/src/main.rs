@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 // #[cfg(target_os = "macos")]
 // #[macro_use]
 // extern crate objc;
+use global_hotkey::{
+    hotkey::{Code, HotKey, Modifiers},
+    GlobalHotKeyManager,
+};
 use tauri::{Manager, WindowBuilder, WindowUrl};
 
 #[tauri::command]
@@ -13,14 +17,18 @@ fn greet(name: &str) -> String {
 }
 
 #[derive(Deserialize)]
-enum QueryType {
-    Placeholder,
+enum QueryMode {
+    Clipboard,
+    BrowserHistory,
+    Files,
+    Scripts,
+    Chat,
 }
 
 #[derive(Deserialize)]
 struct Query {
     search_string: String,
-    kind: QueryType,
+    mode: QueryMode,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -29,8 +37,13 @@ struct QueryResult {
     subheading: String,
 }
 
+#[derive(Clone, serde::Serialize)]
+struct Payload {
+    message: String,
+}
+
 #[tauri::command]
-fn getResults(query: Query) -> Vec<QueryResult> {
+fn get_query_result(query: Query) -> Vec<QueryResult> {
     vec![
         QueryResult {
             heading: "Exodia".to_string(),
@@ -75,10 +88,11 @@ const WIDTH: f64 = 750.0;
 const HEIGHT: f64 = 500.0;
 
 fn main() {
-    // let ctx = tauri::generate_context!();
-
+    let manager = GlobalHotKeyManager::new().unwrap();
+    let hotkey = HotKey::new(Some(Modifiers::SHIFT), Code::KeyD);
+    manager.register(hotkey);
     let _app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, getResults])
+        .invoke_handler(tauri::generate_handler![greet, get_query_result])
         .setup(move |app| {
             let window = WindowBuilder::new(
                 app,
