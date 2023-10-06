@@ -1,34 +1,14 @@
-import { For, Show, createResource, createSignal, onMount } from 'solid-js';
-import { invoke } from '@tauri-apps/api/tauri';
-import { emit, listen } from '@tauri-apps/api/event';
+import { For, Match, Show, Switch, createEffect, useContext } from 'solid-js';
 import { register } from '@tauri-apps/api/globalShortcut';
 import { isRegistered } from '@tauri-apps/api/globalShortcut';
-import { unregister } from '@tauri-apps/api/globalShortcut';
-import { unregisterAll } from '@tauri-apps/api/globalShortcut';
-await unregisterAll();
+import { appWindow } from '@tauri-apps/api/window';
+import { useKeyDownEvent } from '@solid-primitives/keyboard';
 
-import './App.css';
+import './App.scss';
 import SearchResult from './SearchResult';
-
-const QueryMode = {
-  Clipboard: 'Clipboard',
-  BrowserHistory: 'BrowserHistory',
-  Files: 'Files',
-  Scripts: 'Scripts',
-  Chat: 'Chat',
-} as const;
-
-type Query = {
-  search_string: string;
-  mode: keyof typeof QueryMode;
-};
-
-async function getData(query: Query): Promise<any[]> {
-  const data = await invoke<any[]>('get_query_result', {
-    query,
-  });
-  return data;
-}
+import { StoreContext } from './store';
+import { hide, toggle_main_window } from './invocations';
+import { QueryMode } from './constants';
 
 const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
@@ -44,65 +24,165 @@ const loadingState = (
   </For>
 );
 
-// (async () => {
-//   // const exists = await isRegistered('ESC');
-//   // console.log({ exists });
-//   // if (!exists) {
-//   await register('ESCAPE', () => {
-//     console.log('Esc Shortcut triggered');
-//   });
-//   await register('CommandOrControl+Shift+C', () => {
-//     console.log('Shortcut triggered');
-//   });
-//   // }
-// })();
+function ActionSelector() {
+  const actions = Object.keys(QueryMode).map((str) => ({
+    title: str,
+  }));
+  return (
+    <div class="action-selector">
+      <For each={actions}>
+        {(item, i) => (
+          <div class="action active">
+            <span>{item.title}</span>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
 
-function App() {
-  const [input, setInput] = createSignal('');
-  const [mode, setMode] = createSignal(QueryMode.Files);
-  const query = () => ({ search_string: input(), mode: mode() });
-  const [data] = createResource<any[], Query>(query, getData);
-
-  const unlisten = listen('keypress', (event) => {
-    console.log(event);
-  });
-
-  let ref;
-  let inputRef;
+function Preview() {
+  const [state, resource, selection] = useContext(StoreContext);
 
   return (
-    <div ref={ref} class="search-container draggable-area">
-      <div class="search-input-container" data-tauri-drag-region>
+    <div class="preview-container">
+      <Switch fallback={<div>No Preview</div>}>
+        <Match when={selection()?.preview?.text}>
+          {selection().preview.text}
+        </Match>
+      </Switch>
+    </div>
+  );
+}
+
+function App() {
+  const [
+    state,
+    results,
+    selection,
+    {
+      openCursor,
+      openSelected,
+      cursorUp,
+      cursorDown,
+      set_search_string,
+      set_search_mode,
+    },
+  ] = useContext(StoreContext);
+
+  let inputRef!: HTMLInputElement;
+  let ref;
+
+  const keyboardEvent = useKeyDownEvent();
+
+  const focus = () => {
+    if (inputRef) {
+      inputRef.focus();
+    }
+  };
+
+  createEffect(async () => {
+    const u = await appWindow.onFocusChanged(async ({ payload: focused }) => {
+      // if (!focused) {
+      //   await hide();
+      // }
+    });
+
+    const un = await appWindow.listen('_', (e) => {
+      console.log('KEYPRESS', e);
+    });
+
+    const exists = await isRegistered('CommandOrControl+K');
+    if (!exists) {
+      await register('CommandOrControl+K', async () => {
+        focus();
+        set_search_string('');
+        await toggle_main_window();
+      });
+    }
+  });
+
+  createEffect(async () => {
+    const event = keyboardEvent();
+    if (!event) return;
+
+    const { key, shiftKey, ctrlKey, metaKey, altKey } = event;
+    focus();
+
+    switch (key) {
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9': {
+        if (metaKey || ctrlKey) {
+          openSelected(key);
+        }
+        return;
+      }
+      case 'ArrowUp':
+        return cursorUp();
+      case 'ArrowDown':
+        return cursorDown();
+      case 'Enter': {
+        return openCursor();
+      }
+      case 'Escape': {
+        await hide();
+        set_search_string('');
+        return;
+      }
+    }
+  });
+
+  const mapped = () => {
+    if (results.loading) {
+      return [];
+    }
+    return results().map((r, i) => ({
+      ...r,
+      selected:
+        i === state.cursor || state.cursor > (results?.latest?.length ?? 0),
+    }));
+  };
+
+  return (
+    <div ref={ref} class="search-container">
+      <div class="handle draggable-area" data-tauri-drag-region />
+      <div class="search-input-container draggable-area" data-tauri-drag-region>
         <input
           ref={inputRef}
+          onFocusOut={() => inputRef && inputRef.focus()}
           autofocus={true}
           type="text"
           spellcheck={false}
           class="search-input"
-          value={input()}
+          value={state.search_string}
           onInput={(e) => {
-            setInput(e.currentTarget.value);
+            set_search_string(e.currentTarget.value);
           }}
         />
       </div>
+      <ActionSelector />
       <div class="details-container">
-        <div class="result-container">
-          <ul>
-            <Show when={!data.loading} fallback={loadingState}>
-              <For each={data()}>
-                {(item) => (
-                  <SearchResult
-                    heading={item.heading}
-                    subtext={item.subheading}
-                  />
-                )}
-              </For>
-            </Show>
+        <Show when={!results.loading} fallback={loadingState}>
+          <ul class="result-container">
+            <For each={mapped()}>
+              {(item, i) => (
+                <SearchResult
+                  selected={item.selected}
+                  heading={item.heading}
+                  subtext={item.subheading}
+                />
+              )}
+            </For>
           </ul>
-        </div>
-        <div class="preview-container">
-          {/* <img src="https://placehold.it/300/300"/> */}
-        </div>
+          <Preview />
+        </Show>
       </div>
     </div>
   );
