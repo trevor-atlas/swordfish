@@ -12,6 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@solid-primitives/keyboard": "^1.2.5",
+    "@solid-primitives/scheduled": "^1.4.1",
     "@tauri-apps/api": "^1.5.0",
     "solid-js": "^1.7.8"
   },

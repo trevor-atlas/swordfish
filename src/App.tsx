@@ -1,4 +1,12 @@
-import { For, Match, Show, Switch, createEffect, useContext } from 'solid-js';
+import {
+  For,
+  Match,
+  Show,
+  Switch,
+  createEffect,
+  createSignal,
+  useContext,
+} from 'solid-js';
 import { register } from '@tauri-apps/api/globalShortcut';
 import { isRegistered } from '@tauri-apps/api/globalShortcut';
 import { appWindow } from '@tauri-apps/api/window';
@@ -9,6 +17,8 @@ import SearchResult from './SearchResult';
 import { StoreContext } from './store';
 import { hide, toggle_main_window } from './invocations';
 import { QueryMode } from './constants';
+import Preview from './components/Preview';
+import QueryResultList from './components/QueryResultList';
 
 const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
@@ -41,30 +51,15 @@ function ActionSelector() {
   );
 }
 
-function Preview() {
-  const [state, resource, selection] = useContext(StoreContext);
-
-  return (
-    <div class="preview-container">
-      <Switch fallback={<div>No Preview</div>}>
-        <Match when={selection()?.preview?.text}>
-          {selection().preview.text}
-        </Match>
-      </Switch>
-    </div>
-  );
-}
-
 function App() {
   const [
     state,
-    results,
-    selection,
     {
       openCursor,
       openSelected,
       cursorUp,
       cursorDown,
+      setCursor,
       set_search_string,
       set_search_mode,
     },
@@ -93,13 +88,14 @@ function App() {
     });
 
     const exists = await isRegistered('CommandOrControl+K');
-    if (!exists) {
-      await register('CommandOrControl+K', async () => {
-        focus();
-        set_search_string('');
-        await toggle_main_window();
-      });
-    }
+    // if (!exists) {
+    await register('CommandOrControl+K', async () => {
+      focus();
+      set_search_string('');
+      setCursor(0);
+      await toggle_main_window();
+    });
+    // }
   });
 
   createEffect(async () => {
@@ -124,8 +120,14 @@ function App() {
         }
         return;
       }
-      case 'ArrowUp':
-        return cursorUp();
+      case 'ArrowUp': {
+        if (!state.search_string && state.cursor === 0) {
+          // show last command/search string
+          return;
+        } else {
+          return cursorUp();
+        }
+      }
       case 'ArrowDown':
         return cursorDown();
       case 'Enter': {
@@ -139,23 +141,17 @@ function App() {
     }
   });
 
-  const mapped = () => {
-    if (results.loading) {
-      return [];
-    }
-    return results().map((r, i) => ({
-      ...r,
-      selected:
-        i === state.cursor || state.cursor > (results?.latest?.length ?? 0),
-    }));
-  };
-
   return (
     <div ref={ref} class="search-container">
       <div class="handle draggable-area" data-tauri-drag-region />
       <div class="search-input-container draggable-area" data-tauri-drag-region>
         <input
           ref={inputRef}
+          onKeyDown={(event) => {
+            if (event.key == 'ArrowDown' || event.key == 'ArrowUp') {
+              event.preventDefault();
+            }
+          }}
           onFocusOut={() => inputRef && inputRef.focus()}
           autofocus={true}
           type="text"
@@ -169,21 +165,16 @@ function App() {
       </div>
       <ActionSelector />
       <div class="details-container">
-        <Show when={!results.loading} fallback={loadingState}>
-          <ul class="result-container">
-            <For each={mapped()}>
-              {(item, i) => (
-                <SearchResult
-                  selected={item.selected}
-                  heading={item.heading}
-                  subtext={item.subheading}
-                />
-              )}
-            </For>
-          </ul>
+        <Show
+          when={state.queryResult && state.queryResult.length}
+          fallback={loadingState}
+        >
+          <QueryResultList />
           <Preview />
         </Show>
       </div>
+      <ActionSelector />
+      wut
     </div>
   );
 }

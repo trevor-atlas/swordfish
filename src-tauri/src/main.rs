@@ -2,64 +2,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use query::{Query, QueryResult, QueryResultPreview, QueryResultType};
-use serde::{Deserialize, Serialize};
 // #[cfg(target_os = "macos")]
 // #[macro_use]
 // extern crate objc;
 use tauri::{
-    api::process, utils::config::WindowUrl, window::WindowBuilder, App, AppHandle, CustomMenuItem,
-    GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
+    utils::config::WindowUrl, window::WindowBuilder, AppHandle, CustomMenuItem, Manager,
+    SystemTray, SystemTrayEvent, SystemTrayMenu,
 };
 mod query;
 
 #[tauri::command]
 fn get_query_result(query: Query) -> Vec<QueryResult> {
     vec![
-        QueryResult {
-            heading: "Exodia".to_string(),
-            subheading: "The forbidden one".to_string(),
-            preview: Some(QueryResultPreview::ClipboardPreview {
-                filepath: None,
-                text: Some("Its a clipboard entry :)".to_string()),
-            }),
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "Halle Berry".to_string(),
-            subheading: "Still hot tbh".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "The Pope (really)".to_string(),
-            subheading: "He is old".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "MOOG".to_string(),
-            subheading: "They kinda stink as a company but beep boop".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "HubSpot".to_string(),
-            subheading: "Its okay! Really!".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "Stream Deck".to_string(),
-            subheading: "It could be better, but it is aight".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResult {
-            heading: "GGWP BGEZ".to_string(),
-            subheading: "Nerds are so rude".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
         QueryResult {
             heading: "Exodia".to_string(),
             subheading: "The forbidden one".to_string(),

@@ -195,7 +195,6 @@ body,
     cursor: pointer;
     border-left: var(--highlight-border-width) solid transparent;
 
-    &:hover,
     &.active {
       border-left: var(--highlight-border-width) solid orange;
       background-color: rgba(225, 225, 255, 0.05);
