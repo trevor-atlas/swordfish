@@ -80,3 +80,107 @@ pub enum QueryResultPreview {
         subheading: String,
     },
 }
+
+#[tauri::command]
+pub fn get_query_result(query: Query) -> Vec<QueryResult> {
+    vec![
+        QueryResult {
+            heading: "Exodia".to_string(),
+            subheading: "The forbidden one".to_string(),
+            preview: Some(QueryResultPreview::ClipboardPreview {
+                filepath: None,
+                text: Some("Its a clipboard entry :)".to_string()),
+            }),
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "Halle Berry".to_string(),
+            subheading: "Still hot tbh".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "The Pope (really)".to_string(),
+            subheading: "He is old".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "MOOG".to_string(),
+            subheading: "They kinda stink as a company but beep boop".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "HubSpot".to_string(),
+            subheading: "Its okay! Really!".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "Stream Deck".to_string(),
+            subheading: "It could be better, but it is aight".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "GGWP BGEZ".to_string(),
+            subheading: "Nerds are so rude".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "Exodia".to_string(),
+            subheading: "The forbidden one".to_string(),
+            preview: Some(QueryResultPreview::ClipboardPreview {
+                filepath: None,
+                text: Some("Its a clipboard entry :)".to_string()),
+            }),
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "Halle Berry".to_string(),
+            subheading: "Still hot tbh".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "The Pope (really)".to_string(),
+            subheading: "He is old".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "MOOG".to_string(),
+            subheading: "They kinda stink as a company but beep boop".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "HubSpot".to_string(),
+            subheading: "Its okay! Really!".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "Stream Deck".to_string(),
+            subheading: "It could be better, but it is aight".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+        QueryResult {
+            heading: "GGWP BGEZ".to_string(),
+            subheading: "Nerds are so rude".to_string(),
+            preview: None,
+            r#type: QueryResultType::Other,
+        },
+    ]
+    .iter()
+    .cloned()
+    .filter(|item| {
+        item.heading
+            .to_lowercase()
+            .contains(&query.search_string.to_lowercase())
+    })
+    .collect()
+}

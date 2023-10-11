@@ -15,7 +15,11 @@ import { useKeyDownEvent } from '@solid-primitives/keyboard';
 import './App.scss';
 import SearchResult from './SearchResult';
 import { StoreContext } from './store';
-import { hide, toggle_main_window } from './invocations';
+import {
+  hide,
+  toggle_main_window,
+  toggle_settings_window,
+} from './invocations';
 import { QueryMode } from './constants';
 import Preview from './components/Preview';
 import QueryResultList from './components/QueryResultList';
@@ -95,7 +99,6 @@ function App() {
       setCursor(0);
       await toggle_main_window();
     });
-    // }
   });
 
   createEffect(async () => {
@@ -105,7 +108,14 @@ function App() {
     const { key, shiftKey, ctrlKey, metaKey, altKey } = event;
     focus();
 
+    console.log(key);
     switch (key) {
+      case ',': {
+        if (metaKey) {
+          return toggle_settings_window();
+        }
+        break;
+      }
       case '1':
       case '2':
       case '3':
