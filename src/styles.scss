@@ -302,3 +302,23 @@ body,
     }
   }
 }
+
+/* width */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,.2);
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: rgba(205,205,255,.2);
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

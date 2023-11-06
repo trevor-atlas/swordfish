@@ -100,7 +100,7 @@ export function StoreProvider(props: { children: JSX.Element }) {
     setState('mode', () => mode);
   }
   function setCursor(cursor: number) {
-    setState((s) => ({
+    setState((_s) => ({
       selection: resource.latest[cursor],
       cursor,
     }));
