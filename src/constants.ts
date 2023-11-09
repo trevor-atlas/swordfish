@@ -1,11 +1,6 @@
 export const QueryMode = {
-  All: 'All',
-  Clipboard: 'Clipboard',
-  BrowserHistory: 'BrowserHistory',
-  Files: 'Files',
-  Scripts: 'Scripts',
   Chat: 'Chat',
-  Actions: 'Actions',
+  Search: 'Search',
 } as const;
 
 export const NUMERIC = /\d+/;

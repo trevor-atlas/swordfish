@@ -1,11 +1,9 @@
+use fend_core;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub enum QueryMode {
-    Clipboard,
-    BrowserHistory,
-    Files,
-    Scripts,
+    Search,
     Chat,
 }
 
@@ -26,11 +24,17 @@ pub enum QueryResultType {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct QueryResult {
+pub struct QueryResultEntry {
     pub heading: String,
     pub subheading: String,
     pub preview: Option<QueryResultPreview>,
     pub r#type: QueryResultType,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct QueryResult {
+    inline_result: Option<String>,
+    results: Vec<QueryResultEntry>,
 }
 
 // What data do we need in order to render previews for different filetypes?
@@ -82,9 +86,9 @@ pub enum QueryResultPreview {
 }
 
 #[tauri::command]
-pub fn get_query_result(query: Query) -> Vec<QueryResult> {
-    vec![
-        QueryResult {
+pub fn get_query_result(query: Query) -> QueryResult {
+    let result_list = vec![
+        QueryResultEntry {
             heading: "Exodia".to_string(),
             subheading: "The forbidden one".to_string(),
             preview: Some(QueryResultPreview::ClipboardPreview {
@@ -93,43 +97,43 @@ pub fn get_query_result(query: Query) -> Vec<QueryResult> {
             }),
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "Halle Berry".to_string(),
             subheading: "Still hot tbh".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "The Pope (really)".to_string(),
             subheading: "He is old".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "MOOG".to_string(),
             subheading: "They kinda stink as a company but beep boop".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "HubSpot".to_string(),
             subheading: "Its okay! Really!".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "Stream Deck".to_string(),
             subheading: "It could be better, but it is aight".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "GGWP BGEZ".to_string(),
             subheading: "Nerds are so rude".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "Exodia".to_string(),
             subheading: "The forbidden one".to_string(),
             preview: Some(QueryResultPreview::ClipboardPreview {
@@ -138,37 +142,37 @@ pub fn get_query_result(query: Query) -> Vec<QueryResult> {
             }),
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "Halle Berry".to_string(),
             subheading: "Still hot tbh".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "The Pope (really)".to_string(),
             subheading: "He is old".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "MOOG".to_string(),
             subheading: "They kinda stink as a company but beep boop".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "HubSpot".to_string(),
             subheading: "Its okay! Really!".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "Stream Deck".to_string(),
             subheading: "It could be better, but it is aight".to_string(),
             preview: None,
             r#type: QueryResultType::Other,
         },
-        QueryResult {
+        QueryResultEntry {
             heading: "GGWP BGEZ".to_string(),
             subheading: "Nerds are so rude".to_string(),
             preview: None,
@@ -182,5 +186,15 @@ pub fn get_query_result(query: Query) -> Vec<QueryResult> {
             .to_lowercase()
             .contains(&query.search_string.to_lowercase())
     })
-    .collect()
+    .collect::<Vec<QueryResultEntry>>();
+
+    let mut context = fend_core::Context::new();
+
+    QueryResult {
+        inline_result: match fend_core::evaluate(&query.search_string, &mut context) {
+            Ok(r) => Some(r.get_main_result().to_string()),
+            Err(_) => None,
+        },
+        results: result_list,
+    }
 }

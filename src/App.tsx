@@ -1,17 +1,13 @@
-import {
-  For,
-  Show,
-  useContext,
-} from 'solid-js';
+import { For, Match, Show, Switch, useContext } from 'solid-js';
 import { appWindow } from '@tauri-apps/api/window';
 
 import './App.scss';
-import SearchResult from './SearchResult';
-import { StoreContext } from './store';
+import { StoreContext, useStore } from './store';
 import { QueryMode } from './constants';
 import Preview from './components/Preview';
 import QueryResultList from './components/QueryResultList';
 import { useInputHandler } from './hooks/useInputHandler';
+import { Chat } from './components/Chat';
 
 const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
@@ -28,6 +24,7 @@ const loadingState = (
 );
 
 function ActionSelector() {
+  const [store] = useStore();
   const actions = Object.keys(QueryMode).map((str) => ({
     title: str,
   }));
@@ -35,7 +32,7 @@ function ActionSelector() {
     <div class="action-selector">
       <For each={actions}>
         {(item) => (
-          <div class="action active">
+          <div class={`${store.mode === item.title && 'active'} action `}>
             <span>{item.title}</span>
           </div>
         )}
@@ -50,14 +47,8 @@ const u = await appWindow.onFocusChanged(async ({ payload: focused }) => {
   // }
 });
 
-
 function App() {
-  const [
-    state,
-    {
-      set_search_string,
-    },
-  ] = useContext(StoreContext);
+  const [state, { set_search_string }] = useContext(StoreContext);
 
   let inputRef!: HTMLInputElement;
   let ref;
@@ -67,20 +58,20 @@ function App() {
       inputRef.focus();
     }
   });
-  
 
   // onMount(async () => {
-    // const exists = await isRegistered('CommandOrControl+K');
-    // if (!exists) {
-    // await register('CommandOrControl+K', async () => {
-    //   focus();
-    //   set_search_string('');
-    //   setCursor(0);
-    //   await toggle_main_window();
-    // });
-    // }
+  // const exists = await isRegistered('CommandOrControl+K');
+  // if (!exists) {
+  // await register('CommandOrControl+K', async () => {
+  //   focus();
+  //   set_search_string('');
+  //   setCursor(0);
+  //   await toggle_main_window();
+  // });
+  // }
   // })
-
+  //
+  console.log(state.queryResult.results);
 
   return (
     <div ref={ref} class="search-container">
@@ -103,19 +94,27 @@ function App() {
             set_search_string(e.currentTarget.value);
           }}
         />
+        <div>{state.queryResult.inline_result}</div>
       </div>
       <ActionSelector />
-      <div class="details-container">
-        <Show
-          when={state.queryResult && state.queryResult.length}
-          fallback={loadingState}
-        >
-          <QueryResultList />
-          <Preview />
-        </Show>
-      </div>
-      <ActionSelector />
-      wut
+      <Switch fallback={<div>No Preview</div>}>
+        <Match when={state.mode === QueryMode.Chat}>
+          <Chat />
+        </Match>
+        <Match when={state.mode === QueryMode.Search}>
+          <div class="details-container">
+            <Show
+              when={
+                state.queryResult.results && state.queryResult.results.length
+              }
+              fallback={loadingState}
+            >
+              <QueryResultList />
+              <Preview />
+            </Show>
+          </div>
+        </Match>
+      </Switch>
     </div>
   );
 }

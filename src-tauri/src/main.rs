@@ -1,11 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::GlobalShortcutManager;
 use tauri::{
     utils::config::WindowUrl, window::WindowBuilder, App, AppHandle, CustomMenuItem, Manager,
     SystemTray, SystemTrayEvent, SystemTrayMenu,
 };
+use tauri::{Event, GlobalShortcutManager};
 
 use crate::{
     query::get_query_result,
@@ -21,7 +21,7 @@ mod query;
 mod tray;
 mod windows;
 
-fn handle_shortcuts(mut app: &App) {
+fn handle_shortcuts(app: &App) {
     let mut gsm = app.global_shortcut_manager();
     let h = app.app_handle();
     let w = acquire_main_window(&h);
@@ -41,7 +41,9 @@ fn handle_shortcuts(mut app: &App) {
     };
 }
 
-fn handle_keypresses() {}
+fn handle_keypresses(event: Event) {
+    println!("got event-name with payload {:?}", event.payload());
+}
 
 fn main() {
     tauri::Builder::default()
@@ -68,8 +70,8 @@ fn main() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             handle_shortcuts(app);
 
-            let id = app.listen_global("keypress", |event| {
-                println!("got event-name with payload {:?}", event.payload());
+            let _id = app.listen_global("keypress", |event| {
+                handle_keypresses(event);
             });
 
             Ok(())

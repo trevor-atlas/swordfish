@@ -277,6 +277,7 @@ body,
 .action-selector {
   display: flex;
   padding: 0.5rem;
+  background-color: var(--secondary-search-background);
 
   .action {
     cursor: pointer;
@@ -286,6 +287,7 @@ body,
     border-radius: 8px;
     transition: background-color 0.2s ease-in-out;
 
+    &.active,
     &:hover {
       background-image: linear-gradient(
         to right,
@@ -310,12 +312,12 @@ body,
 
 /* Track */
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,.2);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: rgba(205,205,255,.2);
+  background: rgba(205, 205, 255, 0.2);
 }
 
 /* Handle on hover */
