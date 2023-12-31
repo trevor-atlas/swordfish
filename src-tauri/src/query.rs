@@ -1,13 +1,16 @@
+use crate::browser::browser::{collate_browser_history_data, HistoryEntry};
+use crate::DataSource::{BrowserHistoryDataSource, DataSource};
 use fend_core;
+use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Serialize)]
 pub enum QueryMode {
     Search,
     Chat,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct Query {
     pub search_string: String,
     pub mode: QueryMode,
@@ -24,17 +27,18 @@ pub enum QueryResultType {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct QueryResultEntry {
+pub struct QueryResultItem {
     pub heading: String,
     pub subheading: String,
-    pub preview: Option<QueryResultPreview>,
+    pub preview: Option<Preview>,
+    #[serde(rename = "type")]
     pub r#type: QueryResultType,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct QueryResult {
-    inline_result: Option<String>,
-    results: Vec<QueryResultEntry>,
+    pub inline_result: Option<String>,
+    pub results: Vec<QueryResultItem>,
 }
 
 // What data do we need in order to render previews for different filetypes?
@@ -63,20 +67,29 @@ pub struct QueryResult {
 // zip, dmg, exe, rar and other compressed formats -> hard to say right now... this will require some research!
 //   some can probably be preprocessed into a list of file info for the client to consume
 
+pub enum FileContent {
+    ParsedContent(String),
+    Content(String),
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum QueryResultPreview {
-    FilePreview {
-        extension: String, // md, json, png, etc
+pub enum Preview {
+    File {
         path: String,
-        size_human: String,
+        filename: String,
+        extension: String,
+        size: String,
         last_modified: String,
+        content: String,
+        parsed_content: String,
     },
-    ClipboardPreview {
+    Clipboard {
         filepath: Option<String>,
-        text: Option<String>,
+        content: String,
+        parsed_content: String,
     },
-    BrowserHistoryPreview {
+    BrowserHistory {
         url: String,
         #[serde(rename = "imageUrl")]
         image_url: String,
@@ -85,108 +98,43 @@ pub enum QueryResultPreview {
     },
 }
 
+fn get_search_result(query: &Query) -> Vec<QueryResultItem> {
+    let browser_history_datasource = BrowserHistoryDataSource::new();
+    let history = browser_history_datasource.query(query);
+    let mut results = vec![];
+
+    match history {
+        Some(items) => {
+            for item in items {
+                results.push(QueryResultItem {
+                    heading: item.title,
+                    subheading: item.url,
+                    preview: None,
+                    r#type: QueryResultType::BrowserHistory,
+                });
+            }
+        }
+        None => (),
+    };
+
+    results
+}
+
 #[tauri::command]
 pub fn get_query_result(query: Query) -> QueryResult {
-    let result_list = vec![
-        QueryResultEntry {
-            heading: "Exodia".to_string(),
-            subheading: "The forbidden one".to_string(),
-            preview: Some(QueryResultPreview::ClipboardPreview {
-                filepath: None,
-                text: Some("Its a clipboard entry :)".to_string()),
-            }),
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "Halle Berry".to_string(),
-            subheading: "Still hot tbh".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "The Pope (really)".to_string(),
-            subheading: "He is old".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "MOOG".to_string(),
-            subheading: "They kinda stink as a company but beep boop".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "HubSpot".to_string(),
-            subheading: "Its okay! Really!".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "Stream Deck".to_string(),
-            subheading: "It could be better, but it is aight".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "GGWP BGEZ".to_string(),
-            subheading: "Nerds are so rude".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "Exodia".to_string(),
-            subheading: "The forbidden one".to_string(),
-            preview: Some(QueryResultPreview::ClipboardPreview {
-                filepath: None,
-                text: Some("Its a clipboard entry :)".to_string()),
-            }),
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "Halle Berry".to_string(),
-            subheading: "Still hot tbh".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "The Pope (really)".to_string(),
-            subheading: "He is old".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "MOOG".to_string(),
-            subheading: "They kinda stink as a company but beep boop".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "HubSpot".to_string(),
-            subheading: "Its okay! Really!".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "Stream Deck".to_string(),
-            subheading: "It could be better, but it is aight".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-        QueryResultEntry {
-            heading: "GGWP BGEZ".to_string(),
-            subheading: "Nerds are so rude".to_string(),
-            preview: None,
-            r#type: QueryResultType::Other,
-        },
-    ]
-    .iter()
-    .cloned()
-    .filter(|item| {
-        item.heading
-            .to_lowercase()
-            .contains(&query.search_string.to_lowercase())
-    })
-    .collect::<Vec<QueryResultEntry>>();
+    let results = match query.mode {
+        QueryMode::Search => get_search_result(&query),
+        QueryMode::Chat => get_search_result(&query),
+    };
+    let filtered_results = results
+        .iter()
+        .cloned()
+        .filter(|item| {
+            item.heading
+                .to_lowercase()
+                .contains(&query.search_string.to_lowercase())
+        })
+        .collect::<Vec<QueryResultItem>>();
 
     let mut context = fend_core::Context::new();
 
@@ -195,6 +143,6 @@ pub fn get_query_result(query: Query) -> QueryResult {
             Ok(r) => Some(r.get_main_result().to_string()),
             Err(_) => None,
         },
-        results: result_list,
+        results: filtered_results,
     }
 }

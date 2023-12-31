@@ -64,6 +64,8 @@ h6 {
   -webkit-app-region: drag;
 }
 
+$medium: 1024px;
+
 :root {
   --primary-seach-color: rgba(255, 255, 255, 0.8);
   --secondary-search-color: rgba(255, 255, 255, 0.5);
@@ -71,6 +73,13 @@ h6 {
   --secondary-search-background: rgba(0, 0, 0, 0.1);
   --highlight-border-width: 4px;
   --radius: 4px;
+
+  --result-list-width: 50%;
+  --preview-width: 50%;
+  @media (min-width: $medium) {
+    --result-list-width: 33%;
+    --preview-width: 77%;
+  }
 }
 
 :root,
@@ -157,7 +166,7 @@ body,
 }
 
 .preview-container {
-  width: 50%;
+  width: var(--preview-width);
   background-image: linear-gradient(
     45deg,
     hsl(240deg 100% 37%) 0%,
@@ -173,7 +182,7 @@ body,
 }
 
 .result-container {
-  width: 50%;
+  width: var(--result-list-width);
   max-height: 100%;
   min-height: 300px;
   padding: 0;
@@ -240,7 +249,7 @@ body,
   cursor: pointer;
 }
 
-.shimmerBG {
+.shimmer-bg {
   animation-duration: 2.2s;
   animation-fill-mode: forwards;
   animation-iteration-count: infinite;

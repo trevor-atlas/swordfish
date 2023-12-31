@@ -1,6 +1,5 @@
 import { For, Match, Show, Switch, useContext } from 'solid-js';
 import { appWindow } from '@tauri-apps/api/window';
-
 import './App.scss';
 import { StoreContext, useStore } from './store';
 import { QueryMode } from './constants';
@@ -13,7 +12,7 @@ const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
     {() => (
       <div
-        class="shimmerBG"
+        class="shimmer-bg"
         style={{
           width: '100%',
           height: '5rem',
@@ -59,20 +58,6 @@ function App() {
     }
   });
 
-  // onMount(async () => {
-  // const exists = await isRegistered('CommandOrControl+K');
-  // if (!exists) {
-  // await register('CommandOrControl+K', async () => {
-  //   focus();
-  //   set_search_string('');
-  //   setCursor(0);
-  //   await toggle_main_window();
-  // });
-  // }
-  // })
-  //
-  console.log(state.queryResult.results);
-
   return (
     <div ref={ref} class="search-container">
       <div class="handle draggable-area" data-tauri-drag-region />
@@ -80,7 +65,7 @@ function App() {
         <input
           ref={inputRef}
           onKeyDown={(event) => {
-            if (event.key == 'ArrowDown' || event.key == 'ArrowUp') {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
             }
           }}

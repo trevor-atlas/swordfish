@@ -7,8 +7,17 @@ export default function Preview() {
   return (
     <div class="preview-container">
       <Switch fallback={<div>No Preview</div>}>
-        <Match when={state.queryResult[state.cursor]?.preview?.text}>
-          {state.queryResult[state.cursor].preview.text}
+        <Match
+          when={
+            state.queryResult.results[state.cursor]?.type === 'BrowserHistory'
+          }
+        >
+          <iframe
+            width="300"
+            height="200"
+            src={state.queryResult.results[state.cursor].subheading}
+            style={{ width: '100%', height: '100%' }}
+          />
         </Match>
       </Switch>
     </div>

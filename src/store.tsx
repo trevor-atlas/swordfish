@@ -3,12 +3,17 @@ import {
   createEffect,
   createResource,
   JSX,
+  onMount,
   useContext,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { NUMERIC, QueryMode } from './constants';
 import { Query, QueryModes, QueryResult, QueryResultEntry } from './types';
 import { get_query_result } from './invocations';
+import { hide } from './invocations';
+import { open } from '@tauri-apps/api/shell';
+
+import { emit, listen } from '@tauri-apps/api/event';
 
 const voidFN = () => {};
 
@@ -61,37 +66,18 @@ export function useStore() {
 export function StoreProvider(props: { children: JSX.Element }) {
   const [state, setState] = createStore<StoreState>(defaultState);
 
-  const [resource] = createResource<QueryResult, Query>(
-    () => ({
-      search_string: state.search_string,
-      mode: state.mode,
-    }),
-    get_query_result,
-    {
-      initialValue: {
-        inline_result: '',
-        results: [],
-      },
-    },
-  );
-
-  createEffect(() => {
-    const data = resource();
-    if (!data) return;
-    setState('queryResult', data);
-    const keyIndex =
-      state.cursor > data.results.length
-        ? data.results.length - 1
-        : state.cursor;
-    setCursor(keyIndex);
+  onMount(() => {
+    listen('query', (data) => {
+      if (!data || !data.payload) return;
+      setState('queryResult', data.payload);
+    });
   });
-
-  const hasQueryResults = (r: any) =>
-    Boolean(r.state === 'ready' && r.latest.length);
 
   function set_search_string(str: string) {
     setState('search_string', () => str);
+    emit('query', { mode: state.mode, search_string: str });
   }
+
   function switch_search_mode() {
     setState('mode', (s) => {
       for (const mode in QueryMode) {
@@ -101,13 +87,15 @@ export function StoreProvider(props: { children: JSX.Element }) {
       return s;
     });
   }
+
   function set_search_mode(mode: QueryModes) {
     setState('mode', () => mode);
   }
+
   function setCursor(cursor: number) {
     //@ts-ignore
     setState(() => ({
-      selection: resource.latest.results[cursor],
+      selection: state.queryResult.results[cursor],
       cursor,
     }));
   }
@@ -121,50 +109,58 @@ export function StoreProvider(props: { children: JSX.Element }) {
       });
     }
   }
+
   function cursorUp() {
     setState((s) => {
       const cursor = (() => {
-        if (!hasQueryResults(resource)) {
-          return s.cursor - 1 < 0 ? s.cursor : s.cursor - 1;
-        }
+        // if (!query) {
+        //   return s.cursor - 1 < 0 ? s.cursor : s.cursor - 1;
+        // }
 
         return s.cursor - 1 < 0
-          ? resource.latest.results.length - 1
+          ? state.queryResult.results.length - 1
           : s.cursor - 1;
       })();
       scrollToCursorPosition(cursor);
       return { cursor };
     });
   }
+
   function cursorDown() {
     setState((s) => {
       const cursor = (() => {
-        if (!hasQueryResults(resource)) return 0;
+        if (!state.queryResult.results.length) return 0;
 
-        return s.cursor < resource.latest.results.length - 1 ? s.cursor + 1 : 0;
+        return s.cursor < state.queryResult.results.length - 1
+          ? s.cursor + 1
+          : 0;
       })();
       scrollToCursorPosition(cursor);
       return { cursor };
     });
   }
+
   function openSelected(key?: string) {
-    if (!hasQueryResults(resource) || !key || !NUMERIC.test(key)) return;
+    if (!state.queryResult.results.length || !key || !NUMERIC.test(key)) return;
     const parsedIdx = parseInt(key, 10);
     const keyIndex =
-      parsedIdx > resource.latest.results.length
-        ? resource.latest.results.length - 1
+      parsedIdx > state.queryResult.results.length
+        ? state.queryResult.results.length - 1
         : parsedIdx - 1;
-    console.log('select item', resource().results[keyIndex]);
+    console.log('select item', state.queryResult.results[keyIndex]);
   }
+
   function openCursor() {
-    if (!hasQueryResults(resource)) return;
+    if (!state.queryResult.results.length) return;
 
     const targetIdx = state.cursor;
     const keyIndex =
-      targetIdx > resource.latest.results.length
-        ? resource.latest.results.length - 1
+      targetIdx > state.queryResult.results.length
+        ? state.queryResult.results.length - 1
         : targetIdx;
-    console.log('cursor selected', resource.latest.results[keyIndex]);
+    open(state.queryResult.results[keyIndex].subheading);
+    hide();
+    console.log('cursor selected', state.queryResult.results[keyIndex]);
   }
 
   const store: Store = [

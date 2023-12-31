@@ -1,25 +1,32 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{
-    utils::config::WindowUrl, window::WindowBuilder, App, AppHandle, CustomMenuItem, Manager,
-    SystemTray, SystemTrayEvent, SystemTrayMenu,
-};
-use tauri::{Event, GlobalShortcutManager};
+mod DataSource;
+mod browser;
+mod constants;
+mod query;
+mod query_engine;
+mod tray;
+mod windows;
+
+use std::borrow::Borrow;
 
 use crate::{
-    query::get_query_result,
+    query::{get_query_result, Query},
     tray::{handle_tray_event, make_tray},
     windows::{
         acquire_main_window, acquire_settings_window, hide_main_window, hide_settings_window,
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
-
-mod constants;
-mod query;
-mod tray;
-mod windows;
+use query::QueryResult;
+use query_engine::{QueryEngine, QueryInterface};
+use tauri::{
+    utils::config::WindowUrl, window::WindowBuilder, App, AppHandle, CustomMenuItem, Manager,
+    SystemTray, SystemTrayEvent, SystemTrayMenu,
+};
+use tauri::{Event, GlobalShortcutManager};
+use DataSource::{BrowserHistoryDataSource, DataSource as _};
 
 fn handle_shortcuts(app: &App) {
     let mut gsm = app.global_shortcut_manager();
@@ -30,22 +37,23 @@ fn handle_shortcuts(app: &App) {
             if bool {
                 println!("hide window");
                 hide_main_window(h.clone());
-            } else {
-                println!("show window");
-                show_main_window(h.clone());
+                ()
             }
+            println!("show window");
+            show_main_window(h.clone());
         }
     }) {
-        Ok(_) => println!("registered the shortcut successfully"),
+        Ok(_) => println!("Registered the shortcut successfully"),
         Err(e) => println!("Error registering global shortcut: {}", e),
     };
 }
 
 fn handle_keypresses(event: Event) {
-    println!("got event-name with payload {:?}", event.payload());
+    println!("got keypress event with payload {:?}", event.payload());
 }
 
 fn main() {
+    let QUERY_ENGINE: QueryEngine = QueryEngine::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_query_result,
@@ -70,8 +78,27 @@ fn main() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             handle_shortcuts(app);
 
-            let _id = app.listen_global("keypress", |event| {
+            let _id = app_handle.listen_global("keypress", |event| {
                 handle_keypresses(event);
+            });
+
+            let handle = app.handle();
+            let id = app_handle.listen_global("query", move |event| {
+                let q: Result<Query, serde_json::Error> = match event.payload() {
+                    Some(str) => serde_json::from_str(str),
+                    None => {
+                        println!("Unable to parse query string into Query");
+                        return;
+                    }
+                };
+
+                match q {
+                    Ok(query) => {
+                        let res = QUERY_ENGINE.query(query);
+                        handle.emit_all("query", res);
+                    }
+                    Err(e) => println!("Error in query {}", e),
+                }
             });
 
             Ok(())
