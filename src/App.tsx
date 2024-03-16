@@ -79,7 +79,6 @@ function App() {
             set_search_string(e.currentTarget.value);
           }}
         />
-        <div>{state.queryResult.inline_result}</div>
       </div>
       <ActionSelector />
       <Switch fallback={<div>No Preview</div>}>
@@ -100,6 +99,15 @@ function App() {
           </div>
         </Match>
       </Switch>
+      <Footer />
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <div class="flex flex-row border-t border-ui-border bg-ui-bg max-h-6.5 min-h-6.5 h-6.5 items-center justify-center overflow-hidden px-4 pt-px">
+      :O
     </div>
   );
 }

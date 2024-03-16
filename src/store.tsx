@@ -69,6 +69,7 @@ export function StoreProvider(props: { children: JSX.Element }) {
   onMount(() => {
     listen('query', (data) => {
       if (!data || !data.payload) return;
+      console.log('QueryResult:', data.payload);
       setState('queryResult', data.payload);
     });
   });

@@ -13,7 +13,7 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "system-tray", "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api", "shell-open"] }
+tauri = { version = "1.5", features = [ "shell-all", "system-tray", "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 fend-core = "1.4"
@@ -22,6 +22,13 @@ rusqlite = "0.30.0"
 glob = "0.3"
 thiserror = "1.0.52"
 url = "2.5.0"
+toml = "0.8.8"
+rust_search = "2.1.0"
+ignore = "0.4.22"
+crossbeam-channel = "0.5.12"
+walkdir = "2.5.0"
+num_cpus = "1.16.0"
+dirs-sys = "0.4.1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

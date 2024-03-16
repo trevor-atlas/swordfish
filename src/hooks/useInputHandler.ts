@@ -39,9 +39,15 @@ export function useInputHandler(onPress: () => void) {
     const hasModifier = shiftKey || ctrlKey || metaKey || altKey;
     focus();
 
-    emit('keypress', { key, shiftKey, ctrlKey, metaKey, altKey, location });
+    console.log('keypress', {
+      key,
+      shiftKey,
+      ctrlKey,
+      metaKey,
+      altKey,
+      location,
+    });
 
-    console.log(event);
     if (hasModifier) {
       if (location === 1) console.log(`left `);
       if (location === 2) console.log(`right `);

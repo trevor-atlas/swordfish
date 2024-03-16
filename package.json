@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "tauri": "tauri"
+    "tauri": "SWORDFISH_DEV=true tauri"
   },
   "license": "MIT",
   "dependencies": {

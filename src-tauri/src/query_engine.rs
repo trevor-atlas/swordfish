@@ -1,6 +1,6 @@
 use crate::{
+    datasource::{BrowserHistoryDataSource, DataSource},
     query::{Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
-    DataSource::{BrowserHistoryDataSource, DataSource},
 };
 
 pub trait QueryInterface {
@@ -27,6 +27,21 @@ impl QueryInterface for QueryEngine {
                 let history = self.browser_history_datasource.query(&query);
                 let mut results = vec![];
 
+                let mut context = fend_core::Context::new();
+                match fend_core::evaluate(&query.search_string, &mut context) {
+                    Ok(r) => {
+                        if !r.get_main_result().is_empty() {
+                            results.push(QueryResultItem {
+                                heading: r.get_main_result().to_string(),
+                                subheading: "".to_string(),
+                                preview: None,
+                                r#type: QueryResultType::Calculator,
+                            });
+                        }
+                    }
+                    Err(_) => {}
+                };
+
                 match history {
                     Some(items) => {
                         for item in items {
@@ -41,30 +56,9 @@ impl QueryInterface for QueryEngine {
                     None => (),
                 };
 
-                let filtered_results = results
-                    .iter()
-                    .cloned()
-                    .filter(|item| {
-                        item.heading
-                            .to_lowercase()
-                            .contains(&query.search_string.to_lowercase())
-                    })
-                    .collect::<Vec<QueryResultItem>>();
-
-                let mut context = fend_core::Context::new();
-
-                QueryResult {
-                    inline_result: match fend_core::evaluate(&query.search_string, &mut context) {
-                        Ok(r) => Some(r.get_main_result().to_string()),
-                        Err(_) => None,
-                    },
-                    results: filtered_results,
-                }
+                QueryResult { results: results }
             }
-            QueryMode::Chat => QueryResult {
-                inline_result: None,
-                results: vec![],
-            },
+            QueryMode::Chat => QueryResult { results: vec![] },
         }
     }
 }

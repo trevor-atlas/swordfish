@@ -15,6 +15,7 @@ export default function Preview() {
           <iframe
             width="300"
             height="200"
+            sandbox=""
             src={state.queryResult.results[state.cursor].subheading}
             style={{ width: '100%', height: '100%' }}
           />

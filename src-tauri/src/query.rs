@@ -1,5 +1,5 @@
 use crate::browser::browser::{collate_browser_history_data, HistoryEntry};
-use crate::DataSource::{BrowserHistoryDataSource, DataSource};
+use crate::datasource::{BrowserHistoryDataSource, DataSource};
 use fend_core;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,7 @@ pub enum QueryResultType {
     BrowserHistory,
     Script,
     Action,
+    Calculator,
     Other,
 }
 
@@ -37,7 +38,6 @@ pub struct QueryResultItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct QueryResult {
-    pub inline_result: Option<String>,
     pub results: Vec<QueryResultItem>,
 }
 
@@ -96,53 +96,4 @@ pub enum Preview {
         heading: String,
         subheading: String,
     },
-}
-
-fn get_search_result(query: &Query) -> Vec<QueryResultItem> {
-    let browser_history_datasource = BrowserHistoryDataSource::new();
-    let history = browser_history_datasource.query(query);
-    let mut results = vec![];
-
-    match history {
-        Some(items) => {
-            for item in items {
-                results.push(QueryResultItem {
-                    heading: item.title,
-                    subheading: item.url,
-                    preview: None,
-                    r#type: QueryResultType::BrowserHistory,
-                });
-            }
-        }
-        None => (),
-    };
-
-    results
-}
-
-#[tauri::command]
-pub fn get_query_result(query: Query) -> QueryResult {
-    let results = match query.mode {
-        QueryMode::Search => get_search_result(&query),
-        QueryMode::Chat => get_search_result(&query),
-    };
-    let filtered_results = results
-        .iter()
-        .cloned()
-        .filter(|item| {
-            item.heading
-                .to_lowercase()
-                .contains(&query.search_string.to_lowercase())
-        })
-        .collect::<Vec<QueryResultItem>>();
-
-    let mut context = fend_core::Context::new();
-
-    QueryResult {
-        inline_result: match fend_core::evaluate(&query.search_string, &mut context) {
-            Ok(r) => Some(r.get_main_result().to_string()),
-            Err(_) => None,
-        },
-        results: filtered_results,
-    }
 }

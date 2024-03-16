@@ -1,11 +1,9 @@
 use dirs::home_dir;
-use fend_core::json;
 use glob::glob;
 use rusqlite::params;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::{env, error, io};
 use std::{fs, thread};
@@ -19,68 +17,15 @@ use super::history::static_configs::{
     arc_path, brave_path, chrome_path, firefox_path, safari_path,
 };
 
-fn exec(cmd: &str, args: &[&str]) -> String {
-    let output = Command::new(cmd)
-        .args(args)
-        .output()
-        .expect("failed to execute cmd");
-
-    String::from_utf8(output.stdout).unwrap()
-}
-
-fn file_exists(file_path: &str) -> bool {
-    if let Ok(metadata) = fs::metadata(file_path) {
-        // Check if the metadata represents a file (not a directory or other type)
-        if metadata.is_file() {
-            return true;
-        }
-    }
-    false
-}
-
-fn delete_file(path: &str) -> io::Result<()> {
-    fs::remove_file(path)?;
-    Ok(())
-}
-
-fn create_table(conn: &Connection) -> Result<()> {
-    match conn.execute(
-        "CREATE TABLE IF NOT EXISTS history (
-             id INTEGER PRIMARY KEY AUTOINCREMENT,
-             browser TEXT NOT NULL,
-             url TEXT NOT NULL UNIQUE,
-             title TEXT NOT NULL,
-             visit_count INTEGER NOT NULL,
-             last_visit_time INTEGER NOT NULL,
-             frecency_score REAL NOT NULL
-         )",
-        (),
-    ) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            println!("Error creating table {}", e);
-            return Err(e);
-        }
-    }
-}
-
 fn insert_history_entries(conn: &mut Connection, history_entries: Vec<HistoryEntry>) -> Result<()> {
     let tx = conn.transaction()?;
-    {
-        let mut statement = match tx.prepare(
-        "INSERT INTO history (browser, url, title, visit_count, last_visit_time, frecency_score) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-    ) {
-        Ok(stmt) => {
-            println!("statement prepared");
-            stmt
-        },
-        Err(e) => {
-            println!("unable to prepare statement {}", e);
-            return Err(e);
-        }
-    };
 
-        for entry in history_entries.iter() {
+    {
+        let mut statement = tx.prepare(
+                "INSERT INTO history (browser, url, title, visit_count, last_visit_time, frecency_score) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+
+        for entry in &history_entries {
             match statement.execute(params![
                 entry.browser.to_str(),
                 entry.url,
@@ -90,15 +35,12 @@ fn insert_history_entries(conn: &mut Connection, history_entries: Vec<HistoryEnt
                 entry.frecency_score
             ]) {
                 Ok(_) => {}
-                Err(e) => {
-                    println!("Error instering {}", e);
-                }
+                Err(_) => {}
             };
         }
     }
 
-    tx.commit();
-    Ok(())
+    tx.commit()
 }
 
 // if a browser is running you cannot read the history sqlite directly
@@ -106,48 +48,25 @@ fn insert_history_entries(conn: &mut Connection, history_entries: Vec<HistoryEnt
 fn copy_browser_sqlite_to_tmpdir(from: &str, name: &str) {
     let mut dest_path = env::temp_dir();
     dest_path.push(format!("sf-history-{}.sqlite", name));
-    match fs::copy(from, &dest_path) {
-        Ok(_) => {
-            println!("Copied to {:?}", dest_path)
-        }
-        Err(e) => {
-            println!("Error: {:?}", e)
-        }
-    };
-}
-
-fn prep_browser_sqlite_for_collation(configs: &Vec<HistorySchema>) {
-    for config in configs {
-        if config.path.contains("*") {
-            for (i, entry) in glob(&config.path)
-                .expect("Failed to read glob pattern")
-                .enumerate()
-            {
-                match entry {
-                    Ok(path) => {
-                        copy_browser_sqlite_to_tmpdir(
-                            &path.to_str().unwrap(),
-                            &format!("{}-{}", &config.browser.to_str(), i + 1),
-                        );
-                    }
-                    Err(e) => println!("{:?}", e),
-                }
-            }
-        }
-        copy_browser_sqlite_to_tmpdir(&config.path, config.browser.to_str());
+    if let Err(e) = fs::copy(from, &dest_path) {
+        println!("Error: {:?}", e);
+    } else {
+        println!("Copied to {:?}", dest_path);
     }
 }
 
 fn get_copied_sqlite_paths_for_history_schema(schema: &HistorySchema) -> Vec<String> {
+    let pattern = format!("sf-history-{}*.sqlite", schema.browser.to_str());
     let mut tmp_path = env::temp_dir();
-    tmp_path.push(format!("sf-history-{}*.sqlite", schema.browser.to_str()));
-    glob(&tmp_path.to_str().unwrap())
+    tmp_path.push(pattern);
+
+    let glob_pattern = tmp_path.to_str().unwrap_or_else(|| panic!("Invalid path"));
+
+    glob(glob_pattern)
         .expect("error finding sqlite globs in tmp dir")
-        .filter_map(|path| match path {
-            Ok(p) => Some(p.to_string_lossy().to_string()),
-            Err(_e) => None,
-        })
-        .collect::<Vec<String>>()
+        .filter_map(Result::ok)
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect()
 }
 
 fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEntry>> {
@@ -160,14 +79,15 @@ fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEnt
     };
 
     let mut statement = match connection.prepare(&schema.query) {
-        Ok(val) => val,
+        Ok(stmt) => stmt,
         Err(e) => {
             println!("error running query '{:?}' for {:?}", e, schema.browser);
             return None;
         }
     };
 
-    let characters_to_remove = "/#";
+    let characters_to_remove: &[_] = &['/', '#', '?', '&'];
+
     let rows = match statement.query_map([], |row| {
         let mut hist = HistoryEntry {
             browser: schema.browser.clone(),
@@ -182,7 +102,8 @@ fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEnt
         match Url::parse(hist.url.as_str()) {
             Ok(mut url) => {
                 url.set_query(None);
-                let updated = url.as_str().trim_start_matches(characters_to_remove);
+                url.set_fragment(None);
+                let updated = url.as_str().trim_end_matches(characters_to_remove);
                 hist.url = updated.to_string();
             }
             Err(e) => {}
@@ -220,8 +141,6 @@ fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEnt
 
 #[derive(Error, Debug)]
 pub enum BrowserHistoryCollationError {
-    #[error("unable to copy history files to aggregate location")]
-    UnableToCopyFiles,
     #[error("unable to establish a connection to combined history database")]
     UnableToConnectToCollatedDB,
     #[error("unable to query combined history database")]
@@ -239,8 +158,6 @@ pub fn collate_browser_history_data() -> Result<(), BrowserHistoryCollationError
         .iter()
         .filter_map(|b| get_browser_history_schema(b))
         .collect();
-    println!("found {} schemas", schemas.len());
-    // prep_browser_sqlite_for_collation(&schemas);
 
     // Create an Arc and Mutex to safely share the 'history' Vec among threads
     let history = Arc::new(Mutex::new(Vec::<HistoryEntry>::new()));
@@ -309,39 +226,47 @@ pub fn collate_browser_history_data() -> Result<(), BrowserHistoryCollationError
 
     if let Some(path) = get_collated_db_path() {
         let p = path.to_str().unwrap();
-        if file_exists(p) {
-            println!("deleting {}", p);
-            let _ = delete_file(p);
-        }
+        let _ = fs::remove_file(p).map_err(|e| {
+            println!("Error removing stale browser history DB: {}", e);
+        });
     }
 
     let mut connection = get_collated_db_connection()?;
-    match create_table(&connection) {
-        Ok(_) => match insert_history_entries(&mut connection, history) {
-            Ok(_) => {
-                println!("Wrote history to collated_browser_history db")
-            }
-            Err(e) => {
-                println!("Error inserting into collated database {}", e);
-                return Err(BrowserHistoryCollationError::UnableToQueryCollatedDB);
-            }
-        },
-        Err(e) => {
+    connection
+        .execute(
+            "CREATE TABLE IF NOT EXISTS history (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             browser TEXT NOT NULL,
+             url TEXT NOT NULL UNIQUE,
+             title TEXT NOT NULL,
+             visit_count INTEGER NOT NULL,
+             last_visit_time INTEGER NOT NULL,
+             frecency_score REAL NOT NULL
+         )",
+            (),
+        )
+        .map_err(|e| {
             println!("Error creating collated database table {}", e);
-            return Err(BrowserHistoryCollationError::UnableToQueryCollatedDB);
-        }
-    };
+            BrowserHistoryCollationError::UnableToQueryCollatedDB
+        })?;
+
+    insert_history_entries(&mut connection, history).map_err(|e| {
+        println!("Error inserting into collated database {}", e);
+        BrowserHistoryCollationError::UnableToQueryCollatedDB
+    })?;
     Ok(())
 }
 
 pub fn get_collated_db_path() -> Option<PathBuf> {
-    match data_dir() {
-        Some(mut dir) => {
-            dir.push("collated_browser_history.db");
-            Some(dir)
+    data_dir().and_then(|mut dir| {
+        dir.push("swordfish");
+        if let Err(e) = fs::create_dir_all(&dir) {
+            eprintln!("Failed to create directory: {}", e);
+            return None;
         }
-        None => None,
-    }
+        dir.push("collated_browser_history.db");
+        Some(dir)
+    })
 }
 
 pub fn get_collated_db_connection() -> Result<Connection, BrowserHistoryCollationError> {
@@ -352,7 +277,7 @@ pub fn get_collated_db_connection() -> Result<Connection, BrowserHistoryCollatio
         }
     };
 
-    let connection = match Connection::open(&collated_db_location) {
+    Ok(match Connection::open(&collated_db_location) {
         Ok(con) => con,
         Err(e) => {
             println!(
@@ -362,60 +287,57 @@ pub fn get_collated_db_connection() -> Result<Connection, BrowserHistoryCollatio
             );
             return Err(BrowserHistoryCollationError::UnableToConnectToCollatedDB);
         }
-    };
-    Ok(connection)
+    })
 }
 
 pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHistoryCollationError> {
     let connection = get_collated_db_connection()?;
+    let query_statement = format!(
+        r#"SELECT * FROM history
+            WHERE title LIKE '%{}%'
+                OR url LIKE '%{}%'
+            ORDER BY frecency_score DESC
+            LIMIT 10"#,
+        query.search_string, query.search_string
+    );
 
-    let query_statement = "SELECT * FROM history WHERE title like '%' || ? || '%' OR url like '%' || ? || '%' ORDER BY frecency_score DESC LIMIT 10";
+    println!("{:?}", query);
+    println!("{}", &query_statement);
 
-    let mut statement = match connection.prepare(query_statement) {
-        Ok(val) => val,
-        Err(e) => {
-            println!("{}", e);
-            return Err(BrowserHistoryCollationError::UnableToQueryCollatedDB);
-        }
-    };
+    let mut statement = connection.prepare(&query_statement).map_err(|e| {
+        println!("{}", e);
+        BrowserHistoryCollationError::UnableToQueryCollatedDB
+    })?;
 
-    let entries = statement.query_map(params![query.search_string, query.search_string], |row| {
-        Ok(HistoryEntry {
-            browser: Browser::from_str(row.get::<_, String>("browser")?.as_str()), // Convert String to Browser enum
-            url: row.get("url")?,
-            title: row.get("title")?,
-            visit_count: row.get("visit_count")?,
-            last_visit_time: row.get("last_visit_time")?,
-            frecency_score: row.get("frecency_score")?,
+    let entries = statement
+        .query_map([], |row| {
+            Ok(HistoryEntry {
+                browser: Browser::from_string(row.get("browser")?),
+                url: row.get("url")?,
+                title: row.get("title")?,
+                visit_count: row.get("visit_count")?,
+                last_visit_time: row.get("last_visit_time")?,
+                frecency_score: row.get("frecency_score")?,
+            })
         })
-    });
-
-    match entries {
-        Ok(values) => Ok(values.map(|result| result.unwrap()).collect()),
-        Err(e) => {
+        .map_err(|e| {
             println!("Error reading from collate_browser_history_data {}", e);
-            return Err(BrowserHistoryCollationError::UnableToSerializeCollatedDB);
-        }
-    }
+            BrowserHistoryCollationError::UnableToSerializeCollatedDB
+        })?;
+
+    entries
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| BrowserHistoryCollationError::UnableToSerializeCollatedDB)
 }
 
 fn calculate_frecency(history: &HistoryEntry) -> f64 {
     let current_time = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs();
-    // Set the weights for the different factors that contribute to the frecency score
-    let visit_weight = 0.80;
-    let age_weight = 0.20;
-    let age = if history.last_visit_time > current_time as i64 {
-        0
-    } else {
-        (current_time as u128 - history.last_visit_time as u128) / (1 * 60 * 60 * 24)
-    };
+    let visit_weight = 0.40;
+    let age_weight = 0.60;
+    let age = (current_time as u128 - history.last_visit_time as u128) / (1 * 60 * 60 * 24);
 
-    if history.visit_count <= 0 {
-        return 0.0;
-    }
+    let score = (age as f64 * age_weight) + (history.visit_count as f64 * visit_weight);
 
-    // Calculate the frecency score using the weights and age
-    let score = (history.visit_count as f64 * visit_weight) - (age as f64 * age_weight);
     if score <= 0.0 {
         return 0.0;
     }
@@ -429,10 +351,10 @@ pub enum Browser {
     Firefox,
     Safari,
     Brave,
-    // Opera,
-    // Vivaldi,
-    // Chromium,
-    // Edge,
+    Opera,
+    Vivaldi,
+    Chromium,
+    Edge,
 }
 
 impl Browser {
@@ -443,10 +365,10 @@ impl Browser {
             Browser::Firefox,
             Browser::Safari,
             Browser::Brave,
-            // Opera,
-            // Edge,
-            // Vivaldi,
-            // Chromium,
+            Browser::Opera,
+            Browser::Edge,
+            Browser::Vivaldi,
+            Browser::Chromium,
         ]
     }
 
@@ -457,12 +379,13 @@ impl Browser {
             Self::Firefox => "Firefox",
             Self::Safari => "Safari",
             Self::Brave => "Brave",
-            // Self::Opera => "Opera",
-            // Self::Edge => "Edge",
-            // Self::Vivaldi => "Vivaldi",
-            // Self::Chromium => "Chromium",
+            Self::Opera => "Opera",
+            Self::Edge => "Edge",
+            Self::Vivaldi => "Vivaldi",
+            Self::Chromium => "Chromium",
         }
     }
+
     pub fn from_str(str: &str) -> Self {
         match str {
             "Arc" => Self::Arc,
@@ -470,12 +393,16 @@ impl Browser {
             "Firefox" => Self::Firefox,
             "Safari" => Self::Safari,
             "Brave" => Self::Brave,
-            _ => panic!()
-            // Self::Opera => "Opera",
-            // Self::Edge => "Edge",
-            // Self::Vivaldi => "Vivaldi",
-            // Self::Chromium => "Chromium",
+            "Opera" => Self::Opera,
+            "Edge" => Self::Edge,
+            "Vivaldi" => Self::Vivaldi,
+            "Chromium" => Self::Chromium,
+            _ => panic!("invalid browser variant in from_str"),
         }
+    }
+
+    pub fn from_string(str: String) -> Self {
+        Browser::from_str(str.as_str())
     }
 }
 
@@ -499,40 +426,26 @@ pub struct HistorySchema {
     pub query: String,
 }
 
+const DEFAULT_QUERY: &str = "SELECT id, url, title, visit_count, CAST(((CAST(last_visit_time as REAL) - 11644473600000000) / 1000000) as BIGINT)as last_visit_time FROM urls ORDER BY visit_count DESC";
+
 pub fn get_browser_history_schema(browser: &Browser) -> Option<HistorySchema> {
-    let default_query = "SELECT id, url, title, visit_count, CAST(((CAST(last_visit_time as REAL) - 11644473600000000) / 1000000) as BIGINT)as last_visit_time FROM urls ORDER BY visit_count DESC";
-
     let (maybe_path, query) = match browser {
-        Browser::Arc => (arc_path(), default_query),
-        Browser::Chrome => (chrome_path(), default_query),
-        Browser::Firefox => (firefox_path(), "SELECT id, url, COALESCE(title, \"\"), visit_count, COALESCE(CAST(last_visit_date as INTEGER), 0) FROM moz_places ORDER BY visit_count DESC"),
+        Browser::Arc => (arc_path(), DEFAULT_QUERY),
+        Browser::Chrome => (chrome_path(), DEFAULT_QUERY),
+        Browser::Brave => (brave_path(), DEFAULT_QUERY),
+        Browser::Firefox => (firefox_path(), "SELECT id, url, COALESCE(title, \"\"), visit_count, COALESCE(CAST(last_visit_date / 1000000) as BIGINT), 0) FROM moz_places ORDER BY visit_count DESC"),
         Browser::Safari => (safari_path(), "SELECT i.id, i.url, COALESCE(v.title, \"\"), i.visit_count, CAST(v.visit_time + 978307200 as BIGINT) as visit_time FROM history_items i LEFT JOIN history_visits v ON i.id = v.history_item ORDER BY i.visit_count DESC"),
-        Browser::Brave => (brave_path(), default_query),
-        // Opera => (opera_path(), DEFAULT_QUERY),
-        // Edge => (edge_path(), DEFAULT_QUERY),
-        // Vivaldi => (vivaldi_path(), DEFAULT_QUERY),
-        // Chromium => (chromium_path(), DEFAULT_QUERY),
+        Browser::Opera | Browser::Edge | Browser::Vivaldi | Browser::Chromium => (None, ""),
     };
 
-    let home_path_buf = match home_dir() {
-        Some(dir) => dir,
-        None => panic!("could not get a valid home dir!"),
-    };
+    let home_path_buf = home_dir().expect("could not get a valid home dir!");
+    let home_path_str = home_path_buf
+        .to_str()
+        .expect("could not parse home dir to string!");
 
-    let home_path_str = match home_path_buf.as_path().to_str() {
-        Some(str_path) => str_path,
-        None => panic!("could not parse home dir to string!"),
-    };
-
-    match maybe_path {
-        Some(p) => {
-            let final_path = p.replace("{}", home_path_str);
-            Some(HistorySchema {
-                browser: *browser,
-                path: final_path,
-                query: query.to_string(),
-            })
-        }
-        None => None,
-    }
+    maybe_path.map(|p| HistorySchema {
+        browser: *browser,
+        path: p.replace("{}", home_path_str),
+        query: query.to_string(),
+    })
 }
