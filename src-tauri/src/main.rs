@@ -59,7 +59,7 @@ struct AppState {
 }
 
 fn main() {
-    // search();
+    search();
     // let QUERY_ENGINE: QueryEngine = QueryEngine::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -76,7 +76,11 @@ fn main() {
             config: Mutex::new(AppConfig::new()),
         })
         .setup(move |app| {
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
+
             let app_handle = app.app_handle();
             let s: State<AppState> = app.state();
             let mut lock = s.config.try_lock();

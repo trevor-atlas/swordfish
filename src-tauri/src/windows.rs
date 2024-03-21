@@ -9,7 +9,10 @@ pub fn hide_main_window(app: AppHandle) {
     let window = acquire_main_window(&app);
     let menu_item = app.tray_handle().get_item("toggle");
     if let Ok(_) = window.hide() {
-        _ = app.hide();
+        #[cfg(target_os = "macos")]
+        {
+            _ = app.hide();
+        }
         _ = menu_item.set_title("Show");
     };
 }
@@ -19,7 +22,10 @@ pub fn show_main_window(app: AppHandle) {
     let window = acquire_main_window(&app);
     let menu_item = app.tray_handle().get_item("toggle");
     if let Ok(_) = window.show() {
-        _ = app.show();
+        #[cfg(target_os = "macos")]
+        {
+            _ = app.show();
+        }
         _ = window.center();
         _ = window.set_focus();
         _ = menu_item.set_title("Hide")

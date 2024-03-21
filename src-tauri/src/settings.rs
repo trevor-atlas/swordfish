@@ -74,28 +74,53 @@ impl AppConfig {
         let home_path = home_path
             .to_str()
             .expect("Could convert the home directory path to a string!");
-        // TODO: make this platform agnostic
-        let default_search_directories: Vec<String> = vec![
-            format!("{}/Desktop", home_path),
-            format!("{}/Downloads", home_path),
-            format!("{}/Applications", home_path),
-            format!("{}/Documents", home_path),
-            format!("{}/Movies", home_path),
-            format!("{}/Music", home_path),
-        ];
-        Self {
-            launch_shortcut: Setting::new_string(
-                "Control+Space",
-                SettingType::String,
-                "What shortcut should the primary app window trigger with",
-            ),
-            search_directories: Setting::new(
-                default_search_directories,
-                SettingType::List,
-                "What directories should we search for files in?",
-            ),
+        #[cfg(target_os = "macos")]
+        {
+            let default_search_directories: Vec<String> = vec![
+                format!("{}/Desktop", home_path),
+                format!("{}/Downloads", home_path),
+                format!("{}/Applications", home_path),
+                format!("{}/Documents", home_path),
+                format!("{}/Movies", home_path),
+                format!("{}/Music", home_path),
+            ];
+            Self {
+                launch_shortcut: Setting::new_string(
+                    "Control+Space",
+                    SettingType::String,
+                    "What shortcut should the primary app window trigger with",
+                ),
+                search_directories: Setting::new(
+                    default_search_directories,
+                    SettingType::List,
+                    "What directories should we search for files in?",
+                ),
+            }
+            .read()
         }
-        .read()
+        #[cfg(target_os = "windows")]
+        {
+            let default_search_directories: Vec<String> = vec![
+                format!("{}\\Desktop", home_path),
+                format!("{}\\Downloads", home_path),
+                format!("{}\\Pictures", home_path),
+                format!("{}\\Videos", home_path),
+            ];
+
+            Self {
+                launch_shortcut: Setting::new_string(
+                    "Control+Space",
+                    SettingType::String,
+                    "What shortcut should the primary app window trigger with",
+                ),
+                search_directories: Setting::new(
+                    default_search_directories,
+                    SettingType::List,
+                    "What directories should we search for files in?",
+                ),
+            }
+            .read()
+        }
     }
 
     pub fn get_search_directories(&self) -> Option<Vec<String>> {
