@@ -2,31 +2,8 @@ import { useKeyDownEvent } from '@solid-primitives/keyboard';
 import { writeText } from '@tauri-apps/api/clipboard';
 import { createEffect, useContext } from 'solid-js';
 import { open } from '@tauri-apps/api/shell';
-import { QueryMode } from '../constants';
 import { toggle_settings_window } from '../invocations';
 import { StoreContext } from '../store';
-import { QueryModes } from '../types';
-
-function nextMode(mode: QueryModes) {
-  switch (mode) {
-    case QueryMode.Chat:
-      return QueryMode.Search;
-    case QueryMode.Search:
-      return QueryMode.Chat;
-    default:
-      return mode;
-  }
-}
-function prevMode(mode: QueryModes) {
-  switch (mode) {
-    case QueryMode.Search:
-      return QueryMode.Chat;
-    case QueryMode.Chat:
-      return QueryMode.Search;
-    default:
-      return mode;
-  }
-}
 
 export function useInputHandler(onPress: () => void) {
   const keyboardEvent = useKeyDownEvent();
@@ -38,7 +15,8 @@ export function useInputHandler(onPress: () => void) {
       setSearchString,
       getSelectedResult,
       resetAndHide,
-      nextSearchMode: switch_search_mode,
+      nextSearchMode,
+      prevSearchMode,
     },
   ] = useContext(StoreContext);
 
@@ -70,11 +48,10 @@ export function useInputHandler(onPress: () => void) {
         event.preventDefault();
         event.stopPropagation();
         if (shiftKey) {
-          console.log('prev mode');
-          return switch_search_mode(prevMode(state.mode));
+          return prevSearchMode();
         }
-        console.log('next mode');
-        return switch_search_mode(nextMode(state.mode));
+        nextSearchMode();
+        break;
       }
       case ',': {
         if (metaKey) {

@@ -3,9 +3,9 @@ use glob::glob;
 use rusqlite::params;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{PathBuf};
+use std::env;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::{env};
 use std::{fs, thread};
 use tauri::api::path::data_dir;
 use thiserror::Error;
@@ -297,7 +297,7 @@ pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHist
             WHERE title LIKE '%{}%'
                 OR url LIKE '%{}%'
             ORDER BY frecency_score DESC
-            LIMIT 10"#,
+            LIMIT 9"#,
         query.search_string, query.search_string
     );
 

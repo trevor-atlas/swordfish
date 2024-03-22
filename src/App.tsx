@@ -1,38 +1,34 @@
-import { For, Match, Show, Switch, useContext } from 'solid-js';
 import { appWindow } from '@tauri-apps/api/window';
+import { For, Match, Show, Switch, useContext } from 'solid-js';
 import './App.scss';
-import { StoreContext, useStore } from './store';
-import { QueryMode } from './constants';
+import { Chat } from './components/Chat';
 import Preview from './components/Preview';
 import QueryResultList from './components/QueryResultList';
+import { CHAT, QUERY_MODES, SEARCH } from './constants';
 import { useInputHandler } from './hooks/useInputHandler';
-import { Chat } from './components/Chat';
-import { hide } from './invocations';
+import { StoreContext, useStore } from './store';
 
 const loadingState = (
-  <For each={[1, 2, 3, 4, 5, 6]}>
-    {() => (
-      <div
-        class="shimmer-bg"
-        style={{
-          width: '100%',
-          height: '5rem',
-        }}
-      />
-    )}
-  </For>
+  <div
+    style={{
+      width: '100%',
+      height: '5rem',
+    }}
+  />
 );
 
 function ActionSelector() {
   const [store] = useStore();
-  const actions = Object.keys(QueryMode).map((str) => ({
+  const actions = QUERY_MODES.map((str) => ({
     title: str,
   }));
   return (
     <div class="action-selector">
       <For each={actions}>
         {(item) => (
-          <div class={`${store.mode === item.title && 'active'} action `}>
+          <div
+            class={`${QUERY_MODES[store.mode] === item.title && 'active'} action `}
+          >
             <span>{item.title}</span>
           </div>
         )}
@@ -65,11 +61,11 @@ function App() {
       <div class="search-input-container draggable-area" data-tauri-drag-region>
         <input
           ref={inputRef}
-          // onKeyDown={(event) => {
-          // if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          //   event.preventDefault();
-          // }
-          // }}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+            }
+          }}
           onFocusOut={() => inputRef && inputRef.focus()}
           autofocus={true}
           type="text"
@@ -83,10 +79,7 @@ function App() {
       </div>
       <ActionSelector />
       <Switch fallback={<div>No Preview</div>}>
-        <Match when={state.mode === QueryMode.Chat}>
-          <Chat />
-        </Match>
-        <Match when={state.mode === QueryMode.Search}>
+        <Match when={state.mode === 0}>
           <Show
             when={state.queryResult.results && state.queryResult.results.length}
             fallback={loadingState}
@@ -94,6 +87,9 @@ function App() {
             <QueryResultList />
             <Preview />
           </Show>
+        </Match>
+        <Match when={state.mode === 1}>
+          <Chat />
         </Match>
       </Switch>
     </div>

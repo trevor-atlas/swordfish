@@ -1,10 +1,8 @@
 import { QueryMode } from './constants';
 
-export type QueryModes = keyof typeof QueryMode;
-
 export type Query = {
   search_string: string;
-  mode: QueryModes;
+  mode: QueryMode;
 };
 
 type QueryResultType =

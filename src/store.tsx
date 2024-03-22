@@ -7,8 +7,8 @@ import {
   useContext,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { NUMERIC, QueryMode } from './constants';
-import { Query, QueryModes, QueryResult, QueryResultEntry } from './types';
+import { NUMERIC, QUERY_MODES, QueryMode } from './constants';
+import { Query, QueryResult, QueryResultEntry } from './types';
 import { get_query_result } from './invocations';
 import { hide } from './invocations';
 import { open } from '@tauri-apps/api/shell';
@@ -17,7 +17,12 @@ import { emit, listen } from '@tauri-apps/api/event';
 
 const voidFN = () => {};
 
-type StoreState = Query & {
+type StoreState = {
+  search_string: string;
+  prev_search: string[];
+  prev_search_index: number;
+  touched: boolean;
+  mode: number;
   cursor: number;
   selection: QueryResult | null;
   queryResult: QueryResult;
@@ -32,8 +37,8 @@ type Store = [
   StoreState,
   {
     setSearchString(str: string): void;
-    nextSearchMode(mode: QueryModes): void;
-    prevSearchMode(mode: QueryModes): void;
+    nextSearchMode(): void;
+    prevSearchMode(): void;
     setCursor(cursor: number): void;
     cursorUp(): void;
     cursorDown(): void;
@@ -44,7 +49,10 @@ type Store = [
 
 const defaultState = {
   search_string: '',
-  mode: QueryMode.Search,
+  prev_search: [],
+  prev_search_index: 0,
+  touched: false,
+  mode: 0,
   queryResult: { inline_result: '', results: [] },
   cursor: 0,
   selection: null,
@@ -68,37 +76,42 @@ export function StoreProvider(props: { children: JSX.Element }) {
       console.log('QueryResult:', data.payload);
       setState('queryResult', data.payload);
     });
+    listen('appwindow:hidden', () => {
+      resetAndHide();
+    });
   });
 
   function setSearchString(str: string) {
-    setState('search_string', () => str);
-    emit('query', { mode: state.mode, search_string: str });
+    if (!str) {
+      setState(() => ({ search_string: str, touched: false }));
+      return;
+    }
+    setState(() => ({ search_string: str, touched: true }));
+    emit('query', { mode: QUERY_MODES[state.mode], search_string: str });
   }
 
   async function resetAndHide() {
     await hide();
-    setSearchString('');
-    setState('queryResult', () => ({ inline_result: '', results: [] }));
+    setState((s) => ({
+      search_string: '',
+      touched: false,
+      prev_search: [...s.prev_search, s.search_string],
+      prev_search_index: 0,
+      queryResult: { inline_result: '', results: [] },
+    }));
   }
 
   function setSearchMode(isAdvancing: boolean = true) {
     setState('mode', (s) => {
       if (!isAdvancing) {
-        for (const mode in Object.values(QueryMode).reverse()) {
-          if (mode === s) continue;
-          return mode as QueryModes;
-        }
+        return s - 1 < 0 ? QUERY_MODES.length - 1 : s - 1;
       }
-      for (const mode in QueryMode) {
-        if (mode === s) continue;
-        return mode as QueryModes;
-      }
-      return s;
+      return s + 1 > QUERY_MODES.length - 1 ? 0 : s + 1;
     });
   }
 
-  function set_search_mode(mode: QueryModes) {
-    setState('mode', () => mode);
+  function set_search_mode(mode: QueryMode) {
+    setState('mode', () => QUERY_MODES.indexOf(mode));
   }
 
   function setCursor(cursor: number) {
@@ -121,15 +134,25 @@ export function StoreProvider(props: { children: JSX.Element }) {
 
   function cursorUp() {
     setState((s) => {
-      const cursor = (() => {
-        // if (!query) {
-        //   return s.cursor - 1 < 0 ? s.cursor : s.cursor - 1;
-        // }
+      // if (!query) {
+      //   return s.cursor - 1 < 0 ? s.cursor : s.cursor - 1;
+      // }
+      if (!s.touched && s.cursor === 0) {
+        const idx = s.prev_search_index + 1;
+        const search =
+          s.prev_search[idx % s.prev_search.length] || s.search_string;
+        emit('query', { mode: QUERY_MODES[state.mode], search_string: search });
+        return {
+          prev_search_index: idx,
+          search_string: search,
+        };
+      }
+      if (!s.queryResult.results.length) {
+        return s;
+      }
 
-        return s.cursor - 1 < 0
-          ? state.queryResult.results.length - 1
-          : s.cursor - 1;
-      })();
+      const cursor =
+        s.cursor - 1 < 0 ? state.queryResult.results.length - 1 : s.cursor - 1;
       scrollToCursorPosition(cursor);
       return { cursor };
     });
@@ -137,13 +160,12 @@ export function StoreProvider(props: { children: JSX.Element }) {
 
   function cursorDown() {
     setState((s) => {
-      const cursor = (() => {
-        if (!state.queryResult.results.length) return 0;
+      if (!state.queryResult.results.length) {
+        return s;
+      }
 
-        return s.cursor < state.queryResult.results.length - 1
-          ? s.cursor + 1
-          : 0;
-      })();
+      const cursor =
+        s.cursor < state.queryResult.results.length - 1 ? s.cursor + 1 : 0;
       scrollToCursorPosition(cursor);
       return { cursor };
     });

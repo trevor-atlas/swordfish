@@ -36,6 +36,7 @@ fn handle_shortcuts(app: &App) {
     match gsm.register("Control+Space", move || {
         if let Ok(bool) = w.is_visible() {
             if bool {
+                h.emit_all("appwindow:hidden", ()).ok();
                 hide_main_window(h.clone());
             } else {
                 show_main_window(h.clone());

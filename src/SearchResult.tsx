@@ -1,6 +1,4 @@
-import { Show, createEffect, createSignal } from 'solid-js';
 import { useStore } from './store';
-import { throttle } from '@solid-primitives/scheduled';
 
 interface ResultProps {
   heading: string;
