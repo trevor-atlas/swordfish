@@ -2,7 +2,7 @@
 name = "swordfish"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["Trevor Atlas"]
 license = ""
 repository = ""
 edition = "2021"
@@ -13,23 +13,23 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.6.1", features = [ "shell-all", "system-tray", "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api"] }
+tauri = { version = "1.6", features = [ "clipboard-all", "shell-all", "system-tray", "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 fend-core = "1.4"
-dirs = "5.0.1"
-rusqlite = { version = "0.31.0", features = ["bundled"] }
+dirs = "5.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
 glob = "0.3"
-thiserror = "1.0.52"
-url = "2.5.0"
-toml = "0.8.8"
+thiserror = "1.0"
+url = "2.5"
+toml = "0.8"
 rust_search = "2.1.0"
 ignore = "0.4.22"
-crossbeam-channel = "0.5.12"
-walkdir = "2.5.0"
-num_cpus = "1.16.0"
-dirs-sys = "0.4.1"
-regex = "1.10.3"
+crossbeam-channel = "0.5"
+walkdir = "2.5"
+num_cpus = "1.16"
+dirs-sys = "0.4"
+regex = "1.10"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

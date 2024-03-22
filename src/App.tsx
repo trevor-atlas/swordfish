@@ -7,6 +7,7 @@ import Preview from './components/Preview';
 import QueryResultList from './components/QueryResultList';
 import { useInputHandler } from './hooks/useInputHandler';
 import { Chat } from './components/Chat';
+import { hide } from './invocations';
 
 const loadingState = (
   <For each={[1, 2, 3, 4, 5, 6]}>
@@ -47,7 +48,7 @@ const u = await appWindow.onFocusChanged(async ({ payload: focused }) => {
 });
 
 function App() {
-  const [state, { set_search_string }] = useContext(StoreContext);
+  const [state, { setSearchString }] = useContext(StoreContext);
 
   let inputRef!: HTMLInputElement;
   let ref;
@@ -64,11 +65,11 @@ function App() {
       <div class="search-input-container draggable-area" data-tauri-drag-region>
         <input
           ref={inputRef}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault();
-            }
-          }}
+          // onKeyDown={(event) => {
+          // if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          //   event.preventDefault();
+          // }
+          // }}
           onFocusOut={() => inputRef && inputRef.focus()}
           autofocus={true}
           type="text"
@@ -76,7 +77,7 @@ function App() {
           class="search-input"
           value={state.search_string}
           onInput={(e) => {
-            set_search_string(e.currentTarget.value);
+            setSearchString(e.currentTarget.value);
           }}
         />
       </div>
@@ -86,20 +87,15 @@ function App() {
           <Chat />
         </Match>
         <Match when={state.mode === QueryMode.Search}>
-          <div class="details-container">
-            <Show
-              when={
-                state.queryResult.results && state.queryResult.results.length
-              }
-              fallback={loadingState}
-            >
-              <QueryResultList />
-              <Preview />
-            </Show>
-          </div>
+          <Show
+            when={state.queryResult.results && state.queryResult.results.length}
+            fallback={loadingState}
+          >
+            <QueryResultList />
+            <Preview />
+          </Show>
         </Match>
       </Switch>
-      <Footer />
     </div>
   );
 }

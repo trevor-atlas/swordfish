@@ -1,6 +1,7 @@
 use std::{
-    env, fs,
-    io::{self, Write},
+    env,
+    fs::{self, File},
+    io::{self, Read, Write},
     path::PathBuf,
 };
 
@@ -9,43 +10,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
-    pub launch_shortcut: Setting<String>,
-    pub search_directories: Setting<Vec<String>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum SettingType {
-    Boolean,
-    String,
-    Enum,
-    List,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Setting<T> {
-    pub value: T,
-    pub r#type: SettingType,
-    pub description: String,
-}
-
-impl Setting<String> {
-    pub fn new_string(value: &str, r#type: SettingType, description: &str) -> Self {
-        Self {
-            value: value.to_string(),
-            r#type,
-            description: description.to_string(),
-        }
-    }
-}
-
-impl<T> Setting<T> {
-    pub fn new(value: T, r#type: SettingType, description: &str) -> Self {
-        Self {
-            value,
-            r#type,
-            description: description.to_string(),
-        }
-    }
+    pub launch_shortcut: String,
+    pub search_directories: Vec<String>,
 }
 
 pub fn config_dir() -> Option<PathBuf> {
@@ -68,59 +34,40 @@ pub fn config_filepath() -> Option<PathBuf> {
     })
 }
 
+fn get_default_search_directories() -> Vec<String> {
+    let home_path = home_dir().expect("couldn't find the home dir!");
+    let home_path = home_path
+        .to_str()
+        .expect("Could convert the home directory path to a string!");
+    #[cfg(target_os = "macos")]
+    {
+        vec![
+            format!("{}/Desktop", home_path),
+            format!("{}/Downloads", home_path),
+            format!("{}/Applications", home_path),
+            format!("{}/Documents", home_path),
+            format!("{}/Movies", home_path),
+            format!("{}/Music", home_path),
+        ]
+    }
+    #[cfg(target_os = "windows")]
+    {
+        vec![
+            format!("{}\\Desktop", home_path),
+            format!("{}\\Downloads", home_path),
+            format!("{}\\Pictures", home_path),
+            format!("{}\\Videos", home_path),
+        ]
+    }
+}
+
 impl AppConfig {
     pub fn new() -> Self {
-        let home_path = home_dir().expect("couldn't find the home dir!");
-        let home_path = home_path
-            .to_str()
-            .expect("Could convert the home directory path to a string!");
-        #[cfg(target_os = "macos")]
-        {
-            let default_search_directories: Vec<String> = vec![
-                format!("{}/Desktop", home_path),
-                format!("{}/Downloads", home_path),
-                format!("{}/Applications", home_path),
-                format!("{}/Documents", home_path),
-                format!("{}/Movies", home_path),
-                format!("{}/Music", home_path),
-            ];
-            Self {
-                launch_shortcut: Setting::new_string(
-                    "Control+Space",
-                    SettingType::String,
-                    "What shortcut should the primary app window trigger with",
-                ),
-                search_directories: Setting::new(
-                    default_search_directories,
-                    SettingType::List,
-                    "What directories should we search for files in?",
-                ),
-            }
-            .read()
+        Self {
+            launch_shortcut: "Control+Space".to_string(),
+            search_directories: get_default_search_directories(),
         }
-        #[cfg(target_os = "windows")]
-        {
-            let default_search_directories: Vec<String> = vec![
-                format!("{}\\Desktop", home_path),
-                format!("{}\\Downloads", home_path),
-                format!("{}\\Pictures", home_path),
-                format!("{}\\Videos", home_path),
-            ];
-
-            Self {
-                launch_shortcut: Setting::new_string(
-                    "Control+Space",
-                    SettingType::String,
-                    "What shortcut should the primary app window trigger with",
-                ),
-                search_directories: Setting::new(
-                    default_search_directories,
-                    SettingType::List,
-                    "What directories should we search for files in?",
-                ),
-            }
-            .read()
-        }
+        .read()
     }
 
     pub fn get_search_directories(&self) -> Option<Vec<String>> {
@@ -134,7 +81,6 @@ impl AppConfig {
         match home_path.to_str() {
             Some(path) => Some(
                 self.search_directories
-                    .value
                     .iter()
                     .map(|dir| dir.replace('~', path))
                     .collect(),
@@ -167,7 +113,7 @@ impl AppConfig {
             }
         };
 
-        let config_file = match std::fs::File::open(config_path) {
+        let config_file = match std::fs::read_to_string(config_path) {
             Ok(file) => file,
             Err(e) => {
                 if e.kind() == io::ErrorKind::NotFound {
@@ -180,7 +126,7 @@ impl AppConfig {
             }
         };
 
-        match serde_json::from_reader(config_file) {
+        match self.from_toml(config_file) {
             Ok(config) => config,
             Err(e) => {
                 eprintln!("Error decoding config file {}", e);
@@ -239,7 +185,20 @@ impl AppConfig {
         return self.clone();
     }
 
+    pub fn from_json(&self, f: String) -> serde_json::Result<String> {
+        serde_json::from_str(&f)
+    }
+
+    pub fn to_json(&self) -> serde_json::Result<String> {
+        serde_json::to_string(self)
+    }
+
     pub fn to_toml(&self) -> Result<String, toml::ser::Error> {
         toml::to_string(self)
+    }
+
+    pub fn from_toml(&self, f: String) -> Result<Self, toml::de::Error> {
+        let me: Self = toml::from_str(&f)?;
+        Ok(me)
     }
 }

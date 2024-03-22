@@ -12,7 +12,6 @@ mod tray;
 mod windows;
 
 use crate::{
-    query::Query,
     search::filename::search,
     tray::{handle_tray_event, make_tray},
     windows::{
@@ -20,21 +19,15 @@ use crate::{
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
-use dirs::home_dir;
 
-use datasource::{BrowserHistoryDataSource, DataSource as _};
-use ignore::WalkBuilder;
-use query::QueryResult;
+use datasource::DataSource as _;
+
+use query::Query;
 use query_engine::{QueryEngine, QueryInterface};
 use settings::AppConfig;
-use std::{cmp, env, path::Path, sync::Mutex};
-use tauri::{
-    utils::config::WindowUrl, window::WindowBuilder, App, AppHandle, CustomMenuItem, Manager,
-    State, SystemTray, SystemTrayEvent, SystemTrayMenu,
-};
-use tauri::{Event, GlobalShortcutManager};
-
-use ignore::DirEntry;
+use std::{env, sync::Mutex};
+use tauri::GlobalShortcutManager;
+use tauri::{App, Manager, State};
 
 fn handle_shortcuts(app: &App) {
     let mut gsm = app.global_shortcut_manager();
@@ -59,8 +52,7 @@ struct AppState {
 }
 
 fn main() {
-    search();
-    // let QUERY_ENGINE: QueryEngine = QueryEngine::new();
+    let QUERY_ENGINE: QueryEngine = QueryEngine::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             show_main_window,
@@ -82,6 +74,7 @@ fn main() {
             }
 
             let app_handle = app.app_handle();
+
             let s: State<AppState> = app.state();
             let mut lock = s.config.try_lock();
             if let Ok(ref mut mutex) = lock {
@@ -101,24 +94,24 @@ fn main() {
             acquire_settings_window(&app_handle);
             handle_shortcuts(app);
 
-            // let handle = app.handle();
-            // let id = app_handle.listen_global("query", move |event| {
-            //     let q: Result<Query, serde_json::Error> = match event.payload() {
-            //         Some(str) => serde_json::from_str(str),
-            //         None => {
-            //             println!("Unable to parse query string into Query");
-            //             return;
-            //         }
-            //     };
+            let handle = app.handle();
+            let id = app_handle.listen_global("query", move |event| {
+                let q: Result<Query, serde_json::Error> = match event.payload() {
+                    Some(str) => serde_json::from_str(str),
+                    None => {
+                        println!("Unable to parse query string into Query");
+                        return;
+                    }
+                };
 
-            // // // // match q {
-            // // // //     Ok(query) => {
-            // // //         // let res = QUERY_ENGINE.query(query);
-            // // //         // handle.emit_all("query", res);
-            // // //     }
-            // //     Err(e) => println!("Error in query {}", e),
-            // }
-            // });
+                match q {
+                    Ok(query) => {
+                        let res = QUERY_ENGINE.query(query);
+                        handle.emit_all("query", res);
+                    }
+                    Err(e) => println!("Error in query {}", e),
+                }
+            });
 
             Ok(())
         })

@@ -10,7 +10,7 @@ interface ResultProps {
 
 const lastMousePos = { x: 0, y: 0 };
 
-export default function Result({ heading, subtext, index }: ResultProps) {
+export default function SearchResult({ heading, subtext, index }: ResultProps) {
   const [state, { setCursor }] = useStore();
 
   let ref!: HTMLLIElement;
@@ -25,31 +25,35 @@ export default function Result({ heading, subtext, index }: ResultProps) {
     lastMousePos.x = event.screenX;
     lastMousePos.y = event.screenY;
   };
-  const active = state.cursor === index;
 
   return (
     <li
       ref={ref}
-      class={`${active ? 'active' : ''} query-result query-result-${index}`}
+      class={`${state.cursor === index ? 'active' : ''} query-result query-result-${index}`}
       onMouseEnter={handleMouseEvent}
       onMouseMove={handleMouseEvent}
     >
-      <span class="result-heading">{heading}</span>
-      <span class="result-subtext">{subtext}</span>
-      <ActiveIndicator active={active} />
-      <span class="keyboard-shortcut">
-        <kbd>⌘</kbd>
-        <kbd>⇧</kbd>
-        <kbd>C</kbd>
-      </span>
+      <div class="result-content">
+        <span class="result-heading">{heading || <NoTitle />}</span>
+        <span class="result-subtext">{subtext}</span>
+        <KeyboardShortcuts />
+      </div>
     </li>
   );
 }
 
-function ActiveIndicator({ active }: { active: boolean }) {
-  return (
-    <Show when={active}>
-      <div class="leading-1 ml-2 flex h-6 w-6 items-center justify-center rounded bg-text-base bg-opacity-10 fill-current text-xs font-bold text-primary/90 transition ease-in hover:bg-opacity-20 hover:text-primary/90" />
-    </Show>
-  );
-}
+const NoTitle = () => <span>� no title :( �</span>;
+
+const KeyboardShortcuts = () => (
+  <div class="keyboard-shortcuts">
+    <KBDCopy />
+  </div>
+);
+
+const KBDCopy = () => (
+  <span class="keyboard-shortcut">
+    copy <kbd>⌘</kbd>
+    <kbd>⇧</kbd>
+    <kbd>C</kbd>
+  </span>
+);

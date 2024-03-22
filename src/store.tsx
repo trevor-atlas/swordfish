@@ -23,17 +23,22 @@ type StoreState = Query & {
   queryResult: QueryResult;
 };
 
+type None = null | undefined;
+type Nullable<T> = T | None;
+const isSome = <T,>(a: Nullable<T>): a is T => typeof a != null;
+const isNone = <T,>(a: Nullable<T>): a is None => !isSome(a);
+
 type Store = [
   StoreState,
   {
-    set_search_string(str: string): void;
-    set_search_mode(mode: QueryModes): void;
-    switch_search_mode(mode: QueryModes): void;
+    setSearchString(str: string): void;
+    nextSearchMode(mode: QueryModes): void;
+    prevSearchMode(mode: QueryModes): void;
     setCursor(cursor: number): void;
     cursorUp(): void;
     cursorDown(): void;
-    openSelected(key: `${number}`): void;
-    openCursor(): void;
+    resetAndHide(): void;
+    getSelectedResult(): Nullable<QueryResultEntry>;
   },
 ];
 
@@ -47,17 +52,8 @@ const defaultState = {
 
 export const StoreContext = createContext<Store>([
   defaultState,
-  {
-    set_search_string: voidFN,
-    set_search_mode: voidFN,
-    switch_search_mode: voidFN,
-    setCursor: voidFN,
-    cursorUp: voidFN,
-    cursorDown: voidFN,
-    openSelected: voidFN,
-    openCursor: voidFN,
-  },
-]);
+  {},
+] as unknown as Store);
 
 export function useStore() {
   return useContext(StoreContext);
@@ -74,13 +70,25 @@ export function StoreProvider(props: { children: JSX.Element }) {
     });
   });
 
-  function set_search_string(str: string) {
+  function setSearchString(str: string) {
     setState('search_string', () => str);
     emit('query', { mode: state.mode, search_string: str });
   }
 
-  function switch_search_mode() {
+  async function resetAndHide() {
+    await hide();
+    setSearchString('');
+    setState('queryResult', () => ({ inline_result: '', results: [] }));
+  }
+
+  function setSearchMode(isAdvancing: boolean = true) {
     setState('mode', (s) => {
+      if (!isAdvancing) {
+        for (const mode in Object.values(QueryMode).reverse()) {
+          if (mode === s) continue;
+          return mode as QueryModes;
+        }
+      }
       for (const mode in QueryMode) {
         if (mode === s) continue;
         return mode as QueryModes;
@@ -141,40 +149,38 @@ export function StoreProvider(props: { children: JSX.Element }) {
     });
   }
 
-  function openSelected(key?: string) {
-    if (!state.queryResult.results.length || !key || !NUMERIC.test(key)) return;
-    const parsedIdx = parseInt(key, 10);
-    const keyIndex =
-      parsedIdx > state.queryResult.results.length
-        ? state.queryResult.results.length - 1
-        : parsedIdx - 1;
-    console.log('select item', state.queryResult.results[keyIndex]);
-  }
-
-  function openCursor() {
-    if (!state.queryResult.results.length) return;
-
+  function getSelectedResult(key?: string) {
+    if (!state.queryResult.results.length) {
+      return;
+    }
+    if (key && NUMERIC.test(key)) {
+      const parsedIdx = parseInt(key, 10);
+      const keyIndex =
+        parsedIdx > state.queryResult.results.length
+          ? state.queryResult.results.length - 1
+          : parsedIdx - 1;
+      return state.queryResult.results[keyIndex];
+    }
     const targetIdx = state.cursor;
     const keyIndex =
       targetIdx > state.queryResult.results.length
         ? state.queryResult.results.length - 1
         : targetIdx;
-    open(state.queryResult.results[keyIndex].subheading);
-    hide();
-    console.log('cursor selected', state.queryResult.results[keyIndex]);
+    console.log('select item', state.queryResult.results[keyIndex]);
+    return state.queryResult.results[keyIndex];
   }
 
   const store: Store = [
     state,
     {
-      set_search_string,
-      set_search_mode,
-      switch_search_mode,
+      setSearchString,
+      nextSearchMode: () => setSearchMode(),
+      prevSearchMode: () => setSearchMode(false),
+      getSelectedResult,
       setCursor,
-      openCursor,
-      openSelected,
       cursorDown,
       cursorUp,
+      resetAndHide,
     },
   ];
 

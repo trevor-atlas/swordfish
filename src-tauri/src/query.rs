@@ -1,7 +1,7 @@
-use crate::browser::browser::{collate_browser_history_data, HistoryEntry};
-use crate::datasource::{BrowserHistoryDataSource, DataSource};
-use fend_core;
-use serde::ser::{SerializeStruct, Serializer};
+
+use crate::datasource::{DataSource};
+
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug, Serialize)]

@@ -76,6 +76,7 @@ $medium: 1024px;
   --secondary-search-background: rgba(0, 0, 0, 0.1);
   --highlight-border-width: 4px;
   --radius: 4px;
+  --primary-accent-color: #ffa66b;
 
   --result-list-width: 50%;
   --preview-width: 50%;
@@ -153,6 +154,7 @@ body,
 
 .details-container {
   display: flex;
+  flex-direction: column;
   flex: 1 1 0%;
   overflow-y: hidden;
   width: 100%;
@@ -192,10 +194,10 @@ body,
   padding-bottom: 15rem;
 
   li {
-    word-break: break-all;
+    display: flex;
+    flex-direction: column;
     list-style: none;
-    padding: 1rem;
-    font-size: 1.25rem;
+    padding: 0.5rem;
     width: 100%;
     font-family: inherit;
     color: inherit;
@@ -207,23 +209,59 @@ body,
       background-color: rgba(225, 225, 255, 0.05);
     }
   }
-  .result-heading {
-    font-size: 1rem;
-    color: var(--primary-seach-color);
-    margin: 0;
-    padding: 0;
-    display: block;
-    line-height: 1;
+
+  .result-content {
+    display: flex;
+    flex-direction: column;
   }
-  .result-subtext {
-    margin: 0;
-    padding: 0;
-    line-height: 1;
-    font-size: 0.8rem;
-    color: var(--secondary-search-color);
+
+  .result-heading {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1rem;
+    color: var(--primary-seach-color);
+    margin: 0;
+    padding: 0 0 0.25rem 0;
+    line-height: 1.2;
+  }
+
+  .result-subtext {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    padding: 0 0 0.25rem 0;
+    line-height: 1;
+    font-size: 0.6rem;
+    color: var(--secondary-search-color);
+    white-space: nowrap;
+  }
+
+  .keyboard-shortcuts {
+    color: var(--primary-accent-color);
+    font-size: 0.8rem;
+  }
+
+  .keyboard-shortcut {
+    display: block;
+    width: 100%;
+    line-height: 1;
+
+    kbd {
+      display: inline-block;
+      margin: 0 0.2rem 0 0;
+      padding: 0 0.33rem;
+      font-size: 0.6rem;
+      font-weight: bold;
+      font-family: inherit;
+      line-height: 1.5;
+      background-color: rgba(var(--primary-accent-color), 0.15);
+      border: 1px solid rgba(var(--primary-accent-color), 0.25);
+      border-radius: 3px;
+      white-space: nowrap;
+    }
   }
 }
 
@@ -296,18 +334,18 @@ body,
 
     &.active,
     &:hover {
-      background-image: linear-gradient(
-        to right,
-        rgba(#ef5350, 0.2),
-        rgba(#f9a825, 0.2),
-        rgba(#43a047, 0.2),
-        rgba(#eeff41, 0.2),
-        rgba(#2196f3, 0.2),
-        rgba(#26c6da, 0.2),
-        rgba(#7e57c2, 0.2)
-      );
+      // background-image: linear-gradient(
+      //   to right,
+      //   rgba(#ef5350, 0.2),
+      //   rgba(#f9a825, 0.2),
+      //   rgba(#43a047, 0.2),
+      //   rgba(#eeff41, 0.2),
+      //   rgba(#2196f3, 0.2),
+      //   rgba(#26c6da, 0.2),
+      //   rgba(#7e57c2, 0.2)
+      // );
       background-size: 200px 50px;
-      // color: rgb(255, 161, 46);
+      color: var(--primary-accent-color);
     }
   }
 }
@@ -330,26 +368,4 @@ body,
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
-}
-
-.keyboard-shortcut {
-  display: block;
-  width: 100%;
-  line-height: 1;
-
-  kbd {
-    display: inline-block;
-    margin: 0 0.2rem 0 0;
-    padding: 0 0.33rem;
-    font-size: 0.8rem;
-    font-weight: bold;
-    font-family: inherit;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.7);
-    text-shadow: 0 1px 0 rgba(50, 50, 54, 0.5);
-    background-color: rgba(#2d93e6, 0.15);
-    border: 1px solid rgba(#2196f3, 0.25);
-    border-radius: 3px;
-    white-space: nowrap;
-  }
 }

@@ -3,9 +3,9 @@ use glob::glob;
 use rusqlite::params;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::sync::{Arc, Mutex};
-use std::{env, error, io};
+use std::{env};
 use std::{fs, thread};
 use tauri::api::path::data_dir;
 use thiserror::Error;
@@ -106,7 +106,7 @@ fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEnt
                 let updated = url.as_str().trim_end_matches(characters_to_remove);
                 hist.url = updated.to_string();
             }
-            Err(e) => {}
+            Err(_e) => {}
         }
         Ok(hist)
     }) {

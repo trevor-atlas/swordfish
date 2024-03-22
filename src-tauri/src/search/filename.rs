@@ -1,10 +1,10 @@
 use crate::settings::AppConfig;
-use ignore::DirEntry;
+
 use ignore::WalkBuilder;
 use regex::Regex;
 use std::cmp;
 use std::fs;
-use std::io::Write;
+
 use std::time::Instant;
 
 const FUZZY_SEARCH: &str = r".*";
