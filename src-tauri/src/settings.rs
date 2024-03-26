@@ -44,10 +44,8 @@ fn get_default_search_directories() -> Vec<String> {
         vec![
             format!("{}/Desktop", home_path),
             format!("{}/Downloads", home_path),
-            format!("{}/Applications", home_path),
-            format!("{}/Documents", home_path),
-            format!("{}/Movies", home_path),
-            format!("{}/Music", home_path),
+            "/System/Applications/Notes.app".to_string(),
+            "/Applications".to_string(),
         ]
     }
     #[cfg(target_os = "windows")]
@@ -55,8 +53,6 @@ fn get_default_search_directories() -> Vec<String> {
         vec![
             format!("{}\\Desktop", home_path),
             format!("{}\\Downloads", home_path),
-            format!("{}\\Pictures", home_path),
-            format!("{}\\Videos", home_path),
         ]
     }
 }

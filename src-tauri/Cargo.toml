@@ -13,7 +13,7 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.6", features = [ "clipboard-all", "shell-all", "system-tray", "global-shortcut", "global-shortcut-all", "window-all", "macos-private-api"] }
+tauri = { version = "1.6", features = [ "api-all", "system-tray", "global-shortcut", "macos-private-api"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 fend-core = "1.4"

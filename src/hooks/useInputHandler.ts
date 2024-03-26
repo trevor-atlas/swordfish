@@ -4,6 +4,7 @@ import { createEffect, useContext } from 'solid-js';
 import { open } from '@tauri-apps/api/shell';
 import { toggle_settings_window } from '../invocations';
 import { StoreContext } from '../store';
+import { FILE_RESULT, Nullable, QueryResult, QueryResultEntry } from '../types';
 
 export function useInputHandler(onPress: () => void) {
   const keyboardEvent = useKeyDownEvent();
@@ -37,6 +38,25 @@ export function useInputHandler(onPress: () => void) {
       altKey,
       location,
     });
+
+    async function openResult(result: Nullable<QueryResultEntry>) {
+      if (!result) {
+        console.log('selection is invalid!?', result);
+        return;
+      }
+      switch (result.type) {
+        case FILE_RESULT: {
+          await open(result.subheading);
+          await resetAndHide();
+          break;
+        }
+        default: {
+          await open(result.subheading);
+          await resetAndHide();
+          break;
+        }
+      }
+    }
 
     if (hasModifier) {
       if (location === 1) console.log(`left `);
@@ -97,11 +117,8 @@ export function useInputHandler(onPress: () => void) {
       case 'ArrowDown':
         return cursorDown();
       case 'Enter': {
-        const value = getSelectedResult()?.subheading;
-        if (value) {
-          await open(value);
-          await resetAndHide();
-        }
+        const value = getSelectedResult();
+        openResult(value);
         break;
       }
       case 'Escape': {

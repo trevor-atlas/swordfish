@@ -1,17 +1,8 @@
-import {
-  createContext,
-  createEffect,
-  createResource,
-  JSX,
-  onMount,
-  useContext,
-} from 'solid-js';
+import { createContext, JSX, onMount, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { NUMERIC, QUERY_MODES, QueryMode } from './constants';
-import { Query, QueryResult, QueryResultEntry } from './types';
-import { get_query_result } from './invocations';
+import { NUMERIC, QUERY_MODES } from './constants';
 import { hide } from './invocations';
-import { open } from '@tauri-apps/api/shell';
+import { Nullable, QueryResult, QueryResultEntry } from './types';
 
 import { emit, listen } from '@tauri-apps/api/event';
 
@@ -24,14 +15,8 @@ type StoreState = {
   touched: boolean;
   mode: number;
   cursor: number;
-  selection: QueryResult | null;
   queryResult: QueryResult;
 };
-
-type None = null | undefined;
-type Nullable<T> = T | None;
-const isSome = <T,>(a: Nullable<T>): a is T => typeof a != null;
-const isNone = <T,>(a: Nullable<T>): a is None => !isSome(a);
 
 type Store = [
   StoreState,
@@ -55,7 +40,6 @@ const defaultState = {
   mode: 0,
   queryResult: { inline_result: '', results: [] },
   cursor: 0,
-  selection: null,
 };
 
 export const StoreContext = createContext<Store>([
@@ -72,8 +56,9 @@ export function StoreProvider(props: { children: JSX.Element }) {
 
   onMount(() => {
     listen('query', (data) => {
-      if (!data || !data.payload) return;
-      console.log('QueryResult:', data.payload);
+      if (!data || !data.payload) {
+        return;
+      }
       setState('queryResult', data.payload);
     });
     listen('appwindow:hidden', () => {
@@ -110,17 +95,10 @@ export function StoreProvider(props: { children: JSX.Element }) {
     });
   }
 
-  function set_search_mode(mode: QueryMode) {
-    setState('mode', () => QUERY_MODES.indexOf(mode));
+  function setCursor(cursor: number) {
+    setState(() => ({ cursor }));
   }
 
-  function setCursor(cursor: number) {
-    //@ts-ignore
-    setState(() => ({
-      selection: state.queryResult.results[cursor],
-      cursor,
-    }));
-  }
   // teehee dom logic in state :D
   function scrollToCursorPosition(cursor: number) {
     const ref = document.querySelector(`.query-result-${cursor}`);

@@ -1,17 +1,29 @@
 import { QueryMode } from './constants';
 
+export type None = null | undefined;
+export type Nullable<T> = T | None;
+export const isSome = <T>(a: Nullable<T>): a is T => typeof a != null;
+export const isNone = <T>(a: Nullable<T>): a is None => !isSome(a);
+
 export type Query = {
   search_string: string;
   mode: QueryMode;
 };
 
+export const FILE_RESULT = 'File';
+export const CLIPBOARD_RESULT = 'Clipboard';
+export const BROWSER_HISTORY_RESULT = 'BrowserHistory';
+export const SCRIPT_RESULT = 'Script';
+export const ACTION_RESULT = 'Action';
+export const OTHER_RESULT = 'Other';
+
 type QueryResultType =
-  | 'File'
-  | 'Clipboard'
-  | 'BrowserHistory'
-  | 'Script'
-  | 'Action'
-  | 'Other';
+  | typeof FILE_RESULT
+  | typeof CLIPBOARD_RESULT
+  | typeof BROWSER_HISTORY_RESULT
+  | typeof SCRIPT_RESULT
+  | typeof ACTION_RESULT
+  | typeof OTHER_RESULT;
 
 export interface Result<
   Preview,
@@ -23,11 +35,11 @@ export interface Result<
   type: Kind;
 }
 
-export type FileQueryResult = Result<{ filepath: string }, 'File'>;
+export type FileQueryResult = Result<{ filepath: string }, typeof FILE_RESULT>;
 
 export type ClipboardQueryResult = Result<
   { filepath: string } | string,
-  'Clipboard'
+  typeof CLIPBOARD_RESULT
 >;
 
 export type BrowserHistoryQueryResult = Result<
@@ -37,7 +49,7 @@ export type BrowserHistoryQueryResult = Result<
     heading: string;
     subheading: string;
   },
-  'BrowserHistory'
+  typeof BROWSER_HISTORY_RESULT
 >;
 
 export type ScriptQueryResult = Result<
@@ -45,7 +57,7 @@ export type ScriptQueryResult = Result<
     lang: string;
     content: string;
   },
-  'Script'
+  typeof SCRIPT_RESULT
 >;
 
 export type ActionQueryResult = Result<
@@ -56,15 +68,14 @@ export type ActionQueryResult = Result<
     author: string;
     published: string;
   },
-  'Action'
+  typeof ACTION_RESULT
 >;
 
 export type QueryResult = {
-  inline_result: string;
   results: QueryResultEntry[];
 };
 
-export type OtherQueryResult = Result<null, 'Other'>;
+export type OtherQueryResult = Result<null, typeof OTHER_RESULT>;
 
 export type QueryResultEntry =
   | FileQueryResult

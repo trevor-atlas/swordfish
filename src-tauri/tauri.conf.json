@@ -16,7 +16,7 @@
       "iconPath": "icons/32x32.png"
     },
     "allowlist": {
-      "all": false,
+      "all": true,
       "clipboard": {
         "all": true
       },
@@ -61,7 +61,9 @@
       },
       "shell": {
         "all": true,
-        "open": true
+        "execute": true,
+        "sidecar": true,
+        "open": ".*"
       }
     },
     "bundle": {

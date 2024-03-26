@@ -1,6 +1,7 @@
 use crate::{
     datasource::{BrowserHistoryDataSource, DataSource},
     query::{Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
+    search::filename::search,
 };
 
 pub trait QueryInterface {
@@ -24,7 +25,6 @@ impl QueryInterface for QueryEngine {
     fn query(&self, query: Query) -> QueryResult {
         match query.mode {
             QueryMode::Search => {
-                let history = self.browser_history_datasource.query(&query);
                 let mut results = vec![];
 
                 let mut context = fend_core::Context::new();
@@ -42,19 +42,32 @@ impl QueryInterface for QueryEngine {
                     Err(_) => {}
                 };
 
-                match history {
-                    Some(items) => {
-                        for item in items {
-                            results.push(QueryResultItem {
-                                heading: item.title,
-                                subheading: item.url,
-                                preview: None,
-                                r#type: QueryResultType::BrowserHistory,
-                            });
+                // if let Some(hist_items) = self.browser_history_datasource.query(&query) {
+                //     for item in hist_items {
+                //         results.push(QueryResultItem {
+                //             heading: item.title,
+                //             subheading: item.url,
+                //             preview: None,
+                //             r#type: QueryResultType::BrowserHistory,
+                //         });
+                //     }
+                // }
+
+                if let Some(files) = search(&query) {
+                    for item in files {
+                        match item.split('/').last() {
+                            Some(filename) => {
+                                results.push(QueryResultItem {
+                                    heading: filename.to_string(),
+                                    subheading: item,
+                                    preview: None,
+                                    r#type: QueryResultType::File,
+                                });
+                            }
+                            None => {}
                         }
                     }
-                    None => (),
-                };
+                }
 
                 QueryResult { results: results }
             }

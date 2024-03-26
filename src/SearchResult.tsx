@@ -1,4 +1,5 @@
 import { useStore } from './store';
+import { Tooltip } from './components/Tooltip';
 
 interface ResultProps {
   heading: string;
@@ -31,11 +32,13 @@ export default function SearchResult({ heading, subtext, index }: ResultProps) {
       onMouseEnter={handleMouseEvent}
       onMouseMove={handleMouseEvent}
     >
-      <div class="result-content">
-        <span class="result-heading">{heading || <NoTitle />}</span>
-        <span class="result-subtext">{subtext}</span>
-        <KeyboardShortcuts />
-      </div>
+      <Tooltip content={heading}>
+        <div class="result-content">
+          <span class="result-heading">{heading || <NoTitle />}</span>
+          <span class="result-subtext">{subtext}</span>
+          <KeyboardShortcuts />
+        </div>
+      </Tooltip>
     </li>
   );
 }
