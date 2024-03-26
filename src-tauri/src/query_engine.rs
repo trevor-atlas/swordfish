@@ -1,6 +1,8 @@
+use std::fs::File;
+
 use crate::{
     datasource::{BrowserHistoryDataSource, DataSource},
-    query::{Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
+    query::{Preview, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
     search::filename::search,
 };
 
@@ -55,17 +57,20 @@ impl QueryInterface for QueryEngine {
 
                 if let Some(files) = search(&query) {
                     for item in files {
-                        match item.split('/').last() {
-                            Some(filename) => {
-                                results.push(QueryResultItem {
-                                    heading: filename.to_string(),
-                                    subheading: item,
-                                    preview: None,
-                                    r#type: QueryResultType::File,
-                                });
-                            }
-                            None => {}
-                        }
+                        results.push(QueryResultItem {
+                            heading: item.file_name.clone(),
+                            subheading: item.path.clone(),
+                            preview: Some(Preview::File {
+                                path: item.path.clone(),
+                                filename: item.file_name.clone(),
+                                extension: item.extension,
+                                size: item.size.to_string(),
+                                last_modified: item.last_modified.to_string(),
+                                content: "".to_string(),
+                                parsed_content: "".to_string(),
+                            }),
+                            r#type: QueryResultType::File,
+                        });
                     }
                 }
 
