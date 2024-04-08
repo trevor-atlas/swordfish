@@ -2,7 +2,7 @@ import { createContext, JSX, onMount, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { NUMERIC, QUERY_MODES } from './constants';
 import { hide } from './invocations';
-import { Nullable, QueryResult, QueryResultEntry } from './types';
+import { Nullable, QueryResponse, QueryResultEntry } from './types';
 
 import { emit, listen } from '@tauri-apps/api/event';
 
@@ -15,7 +15,7 @@ type StoreState = {
   touched: boolean;
   mode: number;
   cursor: number;
-  queryResult: QueryResult;
+  queryResult: QueryResponse;
 };
 
 type Store = [
@@ -69,9 +69,9 @@ export function StoreProvider(props: { children: JSX.Element }) {
   function setSearchString(str: string) {
     if (!str) {
       setState(() => ({ search_string: str, touched: false }));
-      return;
+    } else {
+      setState(() => ({ search_string: str, touched: true }));
     }
-    setState(() => ({ search_string: str, touched: true }));
     emit('query', { mode: QUERY_MODES[state.mode], search_string: str });
   }
 

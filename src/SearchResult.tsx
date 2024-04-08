@@ -1,7 +1,10 @@
+import { Show } from 'solid-js';
 import { useStore } from './store';
-import { Tooltip } from './components/Tooltip';
+import { Nullable } from './types';
+import { convertFileSrc } from '@tauri-apps/api/tauri';
 
 interface ResultProps {
+  iconPath: Nullable<string>;
   heading: string;
   subtext: string;
   index: number;
@@ -9,7 +12,12 @@ interface ResultProps {
 
 const lastMousePos = { x: 0, y: 0 };
 
-export default function SearchResult({ heading, subtext, index }: ResultProps) {
+export default function SearchResult({
+  heading,
+  subtext,
+  iconPath,
+  index,
+}: ResultProps) {
   const [state, { setCursor }] = useStore();
 
   let ref!: HTMLLIElement;
@@ -32,13 +40,22 @@ export default function SearchResult({ heading, subtext, index }: ResultProps) {
       onMouseEnter={handleMouseEvent}
       onMouseMove={handleMouseEvent}
     >
-      <Tooltip content={heading}>
-        <div class="result-content">
-          <span class="result-heading">{heading || <NoTitle />}</span>
-          <span class="result-subtext">{subtext}</span>
-          <KeyboardShortcuts />
+      <div class="result-content">
+        <div class="flex items-center">
+          <Show when={iconPath}>
+            <img
+              class="result-icon"
+              src={convertFileSrc(iconPath)}
+              alt="icon"
+            />
+          </Show>
+          <div class="flex flex-col">
+            <span class="result-heading">{heading || <NoTitle />}</span>
+            <span class="result-subtext">{subtext}</span>
+            <KeyboardShortcuts />
+          </div>
         </div>
-      </Tooltip>
+      </div>
     </li>
   );
 }

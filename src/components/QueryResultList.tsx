@@ -10,6 +10,7 @@ export default function QueryResultList() {
         {(item, index) => (
           <SearchResult
             index={index()}
+            iconPath={item.iconPath}
             heading={item.heading}
             subtext={item.subheading}
           />

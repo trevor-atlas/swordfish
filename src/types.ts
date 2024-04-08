@@ -11,75 +11,86 @@ export type Query = {
 };
 
 export const FILE_RESULT = 'File';
-export const CLIPBOARD_RESULT = 'Clipboard';
 export const BROWSER_HISTORY_RESULT = 'BrowserHistory';
 export const SCRIPT_RESULT = 'Script';
 export const ACTION_RESULT = 'Action';
-export const OTHER_RESULT = 'Other';
+export const CALCULATOR_RESULT = 'Calculator';
 
 type QueryResultType =
   | typeof FILE_RESULT
-  | typeof CLIPBOARD_RESULT
   | typeof BROWSER_HISTORY_RESULT
   | typeof SCRIPT_RESULT
   | typeof ACTION_RESULT
-  | typeof OTHER_RESULT;
+  | typeof CALCULATOR_RESULT;
 
-export interface Result<
-  Preview,
-  Kind extends QueryResultType = QueryResultType,
-> {
+export interface QueryResult<Preview> {
+  iconPath: string;
   heading: string;
   subheading: string;
+  value: string;
   preview: Preview;
-  type: Kind;
+  type: QueryResultType;
 }
 
-export type FileQueryResult = Result<{ filepath: string }, typeof FILE_RESULT>;
+export interface FileQueryResult
+  extends QueryResult<{
+    iconPath: string;
+    path: string;
+    filename: string;
+    extension: string;
+    size: string;
+    last_modified: string;
+    content: string;
+    parsed_content: string;
+  }> {
+  type: typeof FILE_RESULT;
+}
 
-export type ClipboardQueryResult = Result<
-  { filepath: string } | string,
-  typeof CLIPBOARD_RESULT
->;
-
-export type BrowserHistoryQueryResult = Result<
-  {
+export interface BrowserHistoryQueryResult
+  extends QueryResult<{
     url: string;
     imageUrl: string;
+    iconPath: Nullable<string>;
+  }> {
+  type: typeof BROWSER_HISTORY_RESULT;
+}
+
+export interface ScriptQueryResult
+  extends QueryResult<{
     heading: string;
     subheading: string;
-  },
-  typeof BROWSER_HISTORY_RESULT
->;
-
-export type ScriptQueryResult = Result<
-  {
-    lang: string;
     content: string;
-  },
-  typeof SCRIPT_RESULT
->;
+    language: string;
+    parsedContent: Nullable<string>;
+  }> {
+  type: typeof SCRIPT_RESULT;
+}
 
-export type ActionQueryResult = Result<
-  {
-    icon: string;
+// workflow? this is a bit different from the others
+// and could become something like alfred workflows
+export interface ActionQueryResult
+  extends QueryResult<{
+    iconPath: string;
     name: string;
     description: string;
     author: string;
     published: string;
-  },
-  typeof ACTION_RESULT
->;
+  }> {
+  type: typeof ACTION_RESULT;
+}
 
-export type QueryResult = {
-  results: QueryResultEntry[];
-};
-
-export type OtherQueryResult = Result<null, typeof OTHER_RESULT>;
+export interface CalculatorQueryResult
+  extends QueryResult<{ parsedContent: string }> {
+  type: typeof CALCULATOR_RESULT;
+}
 
 export type QueryResultEntry =
   | FileQueryResult
-  | ClipboardQueryResult
   | BrowserHistoryQueryResult
   | ScriptQueryResult
-  | ActionQueryResult;
+  | ActionQueryResult
+  | CalculatorQueryResult;
+
+export type QueryResponse = {
+  results: QueryResultEntry[];
+};

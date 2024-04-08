@@ -1,23 +1,28 @@
-use dirs::home_dir;
+use chrono::{DateTime, Months};
+use dirs::{cache_dir, data_dir, home_dir};
 use glob::glob;
-use rusqlite::params;
-use rusqlite::{Connection, Result};
+use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fs, thread};
-use tauri::api::path::data_dir;
 use thiserror::Error;
-use url::Url;
+use tokio::spawn;
+use url::{ParseError, Url};
 
 use crate::query::Query;
+use crate::utilities::get_favicon_cache_path;
 
 use super::history::static_configs::{
     arc_path, brave_path, chrome_path, firefox_path, safari_path,
 };
 
-fn insert_history_entries(conn: &mut Connection, history_entries: Vec<HistoryEntry>) -> Result<()> {
+fn insert_history_entries(
+    conn: &mut Connection,
+    history_entries: Vec<HistoryEntry>,
+) -> Result<(), rusqlite::Error> {
     let tx = conn.transaction()?;
 
     {
@@ -25,6 +30,10 @@ fn insert_history_entries(conn: &mut Connection, history_entries: Vec<HistoryEnt
                 "INSERT INTO history (browser, url, title, visit_count, last_visit_time, frecency_score) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             )?;
 
+        let cacheable = history_entries.clone();
+        spawn(async move {
+            cache_favicons(&cacheable).await;
+        });
         for entry in &history_entries {
             match statement.execute(params![
                 entry.browser.to_str(),
@@ -69,14 +78,51 @@ fn get_copied_sqlite_paths_for_history_schema(schema: &HistorySchema) -> Vec<Str
         .collect()
 }
 
-fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEntry>> {
-    let connection = match Connection::open(path) {
-        Ok(con) => con,
-        Err(e) => {
-            println!("Error connecting to db: {:?}", e);
-            return None;
+async fn cache_favicons(history: &[HistoryEntry]) {
+    for entry in history {
+        match Url::parse(&entry.url) {
+            Ok(url) => {
+                if let Some(domain) = url.domain() {
+                    let domain_owned = domain.to_string();
+                    cache_favicon(&domain_owned).await;
+                }
+            }
+            Err(e) => {
+                println!("Error parsing url: {:?}", e);
+            }
         }
-    };
+    }
+}
+
+async fn cache_favicon(domain: &str) {
+    match get_favicon_cache_path() {
+        None => return,
+        Some(mut path) => {
+            path.push(format!("{}.png", domain));
+            if path.exists() {
+                return;
+            }
+            let request_path = format!("https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://{}&size=64", domain);
+            println!("Requesting favicon for '{:?}'", domain);
+            if let Ok(icon) = reqwest::get(request_path).await {
+                if let Ok(icon) = icon.bytes().await {
+                    if let Ok(mut file) = fs::File::create(&path) {
+                        if let Err(e) = file.write(&icon) {
+                            println!("Error writing favicon to file: {:?}", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn run_schema_query(path: &str, schema: &HistorySchema) -> Option<Vec<HistoryEntry>> {
+    let connection = Connection::open(path)
+        .map_err(|e| {
+            println!("Error connecting to db: {:?}", e);
+        })
+        .unwrap();
 
     let mut statement = match connection.prepare(&schema.query) {
         Ok(stmt) => stmt,
@@ -197,7 +243,7 @@ pub fn collate_browser_history_data() -> Result<(), BrowserHistoryCollationError
 
                 let entries = get_copied_sqlite_paths_for_history_schema(&schema_clone)
                     .iter()
-                    .filter_map(|path| run_schema_query(path, &schema_clone))
+                    .filter_map(move |path| run_schema_query(path, &schema_clone))
                     .flatten()
                     .collect::<Vec<HistoryEntry>>();
 
@@ -235,9 +281,8 @@ pub fn collate_browser_history_data() -> Result<(), BrowserHistoryCollationError
     connection
         .execute(
             "CREATE TABLE IF NOT EXISTS history (
-             id INTEGER PRIMARY KEY AUTOINCREMENT,
              browser TEXT NOT NULL,
-             url TEXT NOT NULL UNIQUE,
+             url TEXT PRIMARY KEY NOT NULL UNIQUE,
              title TEXT NOT NULL,
              visit_count INTEGER NOT NULL,
              last_visit_time INTEGER NOT NULL,
@@ -292,13 +337,21 @@ pub fn get_collated_db_connection() -> Result<Connection, BrowserHistoryCollatio
 
 pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHistoryCollationError> {
     let connection = get_collated_db_connection()?;
+    let current_date = chrono::Utc::now();
+    let one_year_ago = current_date
+        .checked_sub_months(Months::new(12))
+        .expect("cant subtract 12 months from current date");
+    println!("{:?}", one_year_ago.format("%Y-%m-%d"));
+
     let query_statement = format!(
         r#"SELECT * FROM history
             WHERE title LIKE '%{}%'
                 OR url LIKE '%{}%'
+                AND datetime(last_visit_time) >= date('now','-6 months')
+            GROUP BY url
             ORDER BY frecency_score DESC
             LIMIT 9"#,
-        query.search_string, query.search_string
+        query.search_string, query.search_string,
     );
 
     println!("{:?}", query);
@@ -325,9 +378,7 @@ pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHist
             BrowserHistoryCollationError::UnableToSerializeCollatedDB
         })?;
 
-    entries
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|_| BrowserHistoryCollationError::UnableToSerializeCollatedDB)
+    Ok(entries.flat_map(|x| x).collect::<Vec<_>>())
 }
 
 fn calculate_frecency(history: &HistoryEntry) -> f64 {
@@ -438,14 +489,11 @@ pub fn get_browser_history_schema(browser: &Browser) -> Option<HistorySchema> {
         Browser::Opera | Browser::Edge | Browser::Vivaldi | Browser::Chromium => (None, ""),
     };
 
-    let home_path_buf = home_dir().expect("could not get a valid home dir!");
-    let home_path_str = home_path_buf
-        .to_str()
-        .expect("could not parse home dir to string!");
+    let home_path = home_dir().expect("could not parse home dir to string!");
 
     maybe_path.map(|p| HistorySchema {
         browser: *browser,
-        path: p.replace("{}", home_path_str),
+        path: p.replace("{}", home_path.to_str().unwrap()),
         query: query.to_string(),
     })
 }

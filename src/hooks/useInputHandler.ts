@@ -4,7 +4,13 @@ import { createEffect, useContext } from 'solid-js';
 import { open } from '@tauri-apps/api/shell';
 import { toggle_settings_window } from '../invocations';
 import { StoreContext } from '../store';
-import { FILE_RESULT, Nullable, QueryResult, QueryResultEntry } from '../types';
+import {
+  CALCULATOR_RESULT,
+  FILE_RESULT,
+  Nullable,
+  QueryResponse,
+  QueryResultEntry,
+} from '../types';
 
 export function useInputHandler(onPress: () => void) {
   const keyboardEvent = useKeyDownEvent();
@@ -47,6 +53,11 @@ export function useInputHandler(onPress: () => void) {
       switch (result.type) {
         case FILE_RESULT: {
           await open(result.subheading);
+          await resetAndHide();
+          break;
+        }
+        case CALCULATOR_RESULT: {
+          await writeText(result.heading);
           await resetAndHide();
           break;
         }
@@ -99,7 +110,6 @@ export function useInputHandler(onPress: () => void) {
       case 'c':
       case 'C':
         if ((metaKey || ctrlKey) && shiftKey) {
-          console.log('I should clipboard the current value in the cursor');
           const value = getSelectedResult()?.subheading;
           if (value) {
             await writeText(value);

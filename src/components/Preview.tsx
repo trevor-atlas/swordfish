@@ -1,6 +1,11 @@
 import { Match, Show, Switch, useContext } from 'solid-js';
 import { StoreContext } from '../store';
-import { BROWSER_HISTORY_RESULT, FILE_RESULT, FileQueryResult } from '../types';
+import {
+  BROWSER_HISTORY_RESULT,
+  CALCULATOR_RESULT,
+  FILE_RESULT,
+  FileQueryResult,
+} from '../types';
 
 export default function Preview() {
   const [state, { getSelectedResult }] = useContext(StoreContext);
@@ -8,15 +13,15 @@ export default function Preview() {
 
   return (
     <div class="preview-container">
-      <Switch fallback={<div>No Preview</div>}>
+      <Switch fallback={null}>
         <Match when={result()?.type === BROWSER_HISTORY_RESULT}>
-          <iframe
+          {/* <iframe
             width="300"
             height="200"
             sandbox=""
             src={state.queryResult.results[state.cursor].subheading}
             style={{ width: '100%', height: '100%' }}
-          />
+          /> */}
         </Match>
         <Match when={result()?.type === FILE_RESULT}>
           <div class="flex flex-col">
@@ -25,6 +30,9 @@ export default function Preview() {
               {JSON.stringify((result() as FileQueryResult).preview, null, 2)}
             </div>
           </div>
+        </Match>
+        <Match when={result()?.type === CALCULATOR_RESULT}>
+          <div innerHTML={result()?.preview?.parsedContent} />
         </Match>
       </Switch>
     </div>

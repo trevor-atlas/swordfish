@@ -20,26 +20,30 @@ impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
 
     fn update_cache(&mut self) {
         let (tx, rx) = mpsc::channel();
-        thread::spawn(move || {
-            let result = collate_browser_history_data(); // Function execution in new thread
-            tx.send(result).unwrap();
+        tokio::spawn(async move {
+            let result = collate_browser_history_data();
+            tx.send(result)
+                .map_err(|e| {
+                    println!("Error updating browser history cache: {}", e);
+                })
+                .unwrap();
         });
         self.last_updated = ts();
 
-        rx.recv()
-            .unwrap()
-            .expect("Unable to update browser history cache");
-        ()
+        let _ = rx
+            .recv()
+            .map_err(|e| {
+                println!("Unknown error while combining browser histories: {}", e);
+            })
+            .unwrap();
     }
 
     fn query(&self, query: &Query) -> Option<Vec<HistoryEntry>> {
-        match query_collated_db(query) {
-            Ok(data) => Some(data),
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        }
+        query_collated_db(query)
+            .map_err(|e| {
+                println!("Unknown error searching browser history {}", e);
+            })
+            .ok()
     }
 }
 

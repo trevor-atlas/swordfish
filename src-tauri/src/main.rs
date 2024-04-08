@@ -9,6 +9,7 @@ mod query_engine;
 mod search;
 mod settings;
 mod tray;
+mod utilities;
 mod windows;
 
 use crate::{
@@ -28,6 +29,7 @@ use settings::AppConfig;
 use std::{env, sync::Mutex};
 use tauri::GlobalShortcutManager;
 use tauri::{App, Manager, State};
+use tokio;
 
 fn handle_shortcuts(app: &App) {
     let mut gsm = app.global_shortcut_manager();
@@ -51,9 +53,11 @@ fn handle_shortcuts(app: &App) {
 struct AppState {
     config: Mutex<AppConfig>,
 }
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let QUERY_ENGINE: QueryEngine = QueryEngine::new();
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             show_main_window,
@@ -96,21 +100,13 @@ fn main() {
             handle_shortcuts(app);
 
             let handle = app.handle();
-            let id = app_handle.listen_global("query", move |event| {
-                let q: Result<Query, serde_json::Error> = match event.payload() {
-                    Some(str) => serde_json::from_str(str),
-                    None => {
-                        println!("Unable to parse query string into Query");
-                        return;
-                    }
-                };
 
-                match q {
-                    Ok(query) => {
+            let id = app_handle.listen_global("query", move |event| {
+                if let Some(str) = event.payload() {
+                    if let Ok(query) = serde_json::from_str(str) {
                         let res = QUERY_ENGINE.query(query);
-                        handle.emit_all("query", res);
+                        let _ = handle.emit_all("query", res);
                     }
-                    Err(e) => println!("Error in query {}", e),
                 }
             });
 

@@ -47,16 +47,15 @@ function App() {
   const [state, { setSearchString }] = useContext(StoreContext);
 
   let inputRef!: HTMLInputElement;
-  let ref;
 
   useInputHandler(() => {
     if (inputRef) {
-      inputRef.focus();
+      setTimeout(() => inputRef.focus(), 0);
     }
   });
 
   return (
-    <div ref={ref} class="search-container">
+    <div class="search-container">
       <div class="handle draggable-area" data-tauri-drag-region />
       <div class="search-input-container draggable-area" data-tauri-drag-region>
         <input
@@ -66,7 +65,6 @@ function App() {
               event.preventDefault();
             }
           }}
-          onFocusOut={() => inputRef && inputRef.focus()}
           autofocus={true}
           type="text"
           spellcheck={false}
@@ -84,8 +82,10 @@ function App() {
             when={state.queryResult.results && state.queryResult.results.length}
             fallback={loadingState}
           >
-            <QueryResultList />
-            <Preview />
+            <div class="flex flex-row">
+              <QueryResultList />
+              <Preview />
+            </div>
           </Show>
         </Match>
         <Match when={state.mode === 1}>
