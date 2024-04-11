@@ -73,6 +73,7 @@ impl AppConfig {
                 Ok(file) => Some(file),
                 Err(e) => {
                     eprintln!("Error opening config file: {}", e);
+                    self.write();
                     return None;
                 }
             })
@@ -99,36 +100,36 @@ impl AppConfig {
             .and_then(|filepath| match File::create(filepath) {
                 Ok(file) => Some(file),
                 Err(e) => {
-                    eprintln!("Error opening config file: {}", e);
+                    eprintln!("Error creating the config file: {}", e);
                     return None;
                 }
             })
             .and_then(|mut file| match self.to_toml() {
-                Ok(toml) => {
-                    if file.write_all(toml.as_bytes()).is_ok() {
+                Ok(file_content) => {
+                    if file.write_all(file_content.as_bytes()).is_ok() {
                         Some(self.clone())
                     } else {
                         None
                     }
                 }
                 Err(e) => {
-                    eprintln!("Error parsing config into a toml string {}", e);
+                    eprintln!("Error parsing config into a string {}", e);
                     return None;
                 }
             })
             .unwrap_or(self.clone())
     }
 
-    pub fn from_json(&self, f: String) -> serde_json::Result<String> {
+    pub fn from_json(&self, f: String) -> Result<Self, serde_json::Error> {
         serde_json::from_str(&f)
     }
 
     pub fn to_json(&self) -> serde_json::Result<String> {
-        serde_json::to_string(self)
+        serde_json::to_string_pretty(self)
     }
 
     pub fn to_toml(&self) -> Result<String, toml::ser::Error> {
-        toml::to_string(self)
+        toml::to_string_pretty(self)
     }
 
     pub fn from_toml(&self, f: String) -> Result<Self, toml::de::Error> {

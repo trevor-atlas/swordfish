@@ -1,4 +1,5 @@
 use chrono::{DateTime, Months};
+use chrono::{Local, Timelike};
 use dirs::{cache_dir, data_dir, home_dir};
 use glob::glob;
 use rusqlite::{params, Connection, Result};
@@ -256,7 +257,12 @@ pub fn collate_browser_history_data() -> Result<(), BrowserHistoryCollationError
 
     // Wait for all threads to complete
     for handle in handles {
-        handle.join().unwrap();
+        let _ = handle.join().map_err(|e| {
+            println!(
+                "Error unwrapping thread handle in collate_browser_history_data(): {:?}",
+                e
+            );
+        });
     }
 
     // Extract the final 'history' Vec
@@ -382,10 +388,15 @@ pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHist
 }
 
 fn calculate_frecency(history: &HistoryEntry) -> f64 {
-    let current_time = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs();
+    let current_time = Local::now();
+    let timestamp = current_time.timestamp();
     let visit_weight = 0.40;
     let age_weight = 0.60;
-    let age = (current_time as u128 - history.last_visit_time as u128) / (1 * 60 * 60 * 24);
+    if history.last_visit_time > timestamp {
+        println!("Invalid timestamp {:?}", &history);
+        return 0.0;
+    }
+    let age = (timestamp - history.last_visit_time) / (1 * 60 * 60 * 24);
 
     let score = (age as f64 * age_weight) + (history.visit_count as f64 * visit_weight);
 

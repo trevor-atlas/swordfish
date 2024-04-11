@@ -50,10 +50,7 @@ pub fn config_dir() -> Option<PathBuf> {
         .or_else(|| {
             home_dir()
                 .and_then(|mut home| {
-                    #[cfg(any(target_os = "macos", target_os = "linux"))]
-                    {
-                        home.push(".config");
-                    }
+                    home.push(".config");
                     Some(home)
                 })
                 .or_else(|| {
@@ -63,6 +60,7 @@ pub fn config_dir() -> Option<PathBuf> {
         })
         .and_then(|mut path| {
             path.push(APP_NAME);
+            println!("config_dir is {:?}", &path);
             if let Err(e) = fs::create_dir_all(&path) {
                 eprintln!("Failed to create directory: {}", e);
                 return None;

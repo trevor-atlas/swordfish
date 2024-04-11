@@ -22,20 +22,15 @@ impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
         let (tx, rx) = mpsc::channel();
         tokio::spawn(async move {
             let result = collate_browser_history_data();
-            tx.send(result)
-                .map_err(|e| {
-                    println!("Error updating browser history cache: {}", e);
-                })
-                .unwrap();
+            let _ = tx.send(result).map_err(|e| {
+                println!("Error updating browser history cache: {}", e);
+            });
         });
         self.last_updated = ts();
 
-        let _ = rx
-            .recv()
-            .map_err(|e| {
-                println!("Unknown error while combining browser histories: {}", e);
-            })
-            .unwrap();
+        let _ = rx.recv().map_err(|e| {
+            println!("Unknown error while combining browser histories: {}", e);
+        });
     }
 
     fn query(&self, query: &Query) -> Option<Vec<HistoryEntry>> {
