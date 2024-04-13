@@ -4,7 +4,7 @@ import './App.scss';
 import { Chat } from './components/Chat';
 import Preview from './components/Preview';
 import QueryResultList from './components/QueryResultList';
-import { CHAT, QUERY_MODES, SEARCH } from './constants';
+import { BROWSER_HISTORY, CHAT, QUERY_MODES, SEARCH } from './constants';
 import { useInputHandler } from './hooks/useInputHandler';
 import { StoreContext, useStore } from './store';
 
@@ -77,7 +77,12 @@ function App() {
       </div>
       <ActionSelector />
       <Switch fallback={<div>No Preview</div>}>
-        <Match when={state.mode === 0}>
+        <Match
+          when={
+            QUERY_MODES[state.mode] === SEARCH ||
+            QUERY_MODES[state.mode] === BROWSER_HISTORY
+          }
+        >
           <Show
             when={state.queryResult.results && state.queryResult.results.length}
             fallback={loadingState}
@@ -88,7 +93,7 @@ function App() {
             </div>
           </Show>
         </Match>
-        <Match when={state.mode === 1}>
+        <Match when={QUERY_MODES[state.mode] === CHAT}>
           <Chat />
         </Match>
       </Switch>

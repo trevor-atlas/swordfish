@@ -40,6 +40,31 @@ fn get_default_search_directories() -> Vec<String> {
     }
 }
 
+// struct Something {
+//     field1: String,
+//     field2: String,
+//     field3: String,
+// }
+
+// impl<T> Something<T> {
+//     pub fn new() -> Self { /*code*/
+//     }
+//
+//     pub fn field1(self, field_value: T) -> Self {
+//         Something {
+//             field1: field_value,
+//             ..self
+//         }
+//     }
+//
+//     pub fn field2(self, field_value: T) -> Self {
+//         Something {
+//             field2: field_value,
+//             ..self
+//         }
+//     }
+// }
+
 impl AppConfig {
     pub fn new() -> Self {
         Self {

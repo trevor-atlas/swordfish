@@ -89,9 +89,20 @@ export function StoreProvider(props: { children: JSX.Element }) {
   function setSearchMode(isAdvancing: boolean = true) {
     setState('mode', (s) => {
       if (!isAdvancing) {
-        return s - 1 < 0 ? QUERY_MODES.length - 1 : s - 1;
+        const newMode = s - 1 < 0 ? QUERY_MODES.length - 1 : s - 1;
+        emit('query', {
+          mode: QUERY_MODES[newMode],
+          search_string: state.search_string,
+        });
+        return newMode;
       }
-      return s + 1 > QUERY_MODES.length - 1 ? 0 : s + 1;
+
+      const newMode = s + 1 > QUERY_MODES.length - 1 ? 0 : s + 1;
+      emit('query', {
+        mode: QUERY_MODES[newMode],
+        search_string: state.search_string,
+      });
+      return newMode;
     });
   }
 

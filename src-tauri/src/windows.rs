@@ -26,6 +26,7 @@ pub fn show_main_window(app: AppHandle) {
         {
             _ = app.show();
         }
+
         _ = window.center();
         _ = window.set_focus();
         _ = menu_item.set_title("Hide")
@@ -110,22 +111,3 @@ pub fn acquire_settings_window(app: &AppHandle) -> tauri::Window {
         .expect("Unable to create searchbar window"),
     }
 }
-
-// Positions a given window at the center of the monitor with cursor
-// fn position_window_at_the_center_of_the_monitor_with_cursor(window: &Window<Wry>) {
-//     if let Some(monitor) = get_monitor_with_cursor() {
-//         let display_size = monitor.size.to_logical::<f64>(monitor.scale_factor);
-//         let display_pos = monitor.position.to_logical::<f64>(monitor.scale_factor);
-//
-//         let handle: id = window.ns_window().unwrap() as _;
-//         let win_frame: NSRect = unsafe { handle.frame() };
-//         let rect = NSRect {
-//             origin: NSPoint {
-//                 x: (display_pos.x + (display_size.width / 2.0)) - (win_frame.size.width / 2.0),
-//                 y: (display_pos.y + (display_size.height / 2.0)) - (win_frame.size.height / 2.0),
-//             },
-//             size: win_frame.size,
-//         };
-//         let _: () = unsafe { msg_send![handle, setFrame: rect display: YES] };
-//     }
-// }

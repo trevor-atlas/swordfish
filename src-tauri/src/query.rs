@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Debug, Serialize, Clone)]
 pub enum QueryMode {
     Search,
+    BrowserHistory,
     Chat,
     Scripts,
 }
@@ -45,13 +46,11 @@ pub struct QueryResult {
 #[serde(untagged)]
 pub enum Preview {
     File {
-        #[serde(rename = "iconPath")]
-        icon_path: String,
         path: String,
-        filename: String,
-        extension: String,
+        filename: Option<String>,
+        extension: Option<String>,
         size: String,
-        last_modified: String,
+        last_modified: Option<String>,
         content: String,
         #[serde(rename = "parsedContent")]
         parsed_content: Option<String>,
@@ -64,8 +63,6 @@ pub enum Preview {
         subheading: String,
     },
     Script {
-        #[serde(rename = "iconPath")]
-        icon_path: String,
         path: String,
         last_modified: String,
         language: String,

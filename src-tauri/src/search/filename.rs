@@ -3,14 +3,16 @@ use crate::settings::AppConfig;
 
 use ignore::WalkBuilder;
 use regex::Regex;
+use serde::Deserialize;
+use serde::Serialize;
 use std::cmp;
+use std::ffi::OsStr;
 use std::fs;
-use tauri::api::file;
+use std::fs::File;
+use std::path::PathBuf;
 
 use std::path::Path;
 use std::time::Instant;
-
-const FUZZY_SEARCH: &str = r".*";
 
 fn get_extension_from_filename(filename: &str) -> Option<String> {
     // Change it to a canonical file path.
@@ -29,52 +31,50 @@ fn get_extension_from_filename(filename: &str) -> Option<String> {
     }
 }
 
-fn get_filetype_from_filename(file_extension: Option<&str>) -> FileType {
-    match file_extension {
-        Some(ext) => match ext {
-            "ts" | "tsx" => FileType::Typescript,
-            "js" | "jsx" => FileType::Javascript,
-            "rs" => FileType::Rust,
-            "py" => FileType::Python,
-            "c" => FileType::C,
-            "cpp" => FileType::Cpp,
-            "java" => FileType::Java,
-            "go" => FileType::Go,
-            "txt" => FileType::Text,
-            "md" => FileType::Markdown,
-            "json" => FileType::Json,
-            "xml" => FileType::Xml,
-            "yaml" => FileType::Yaml,
-            "toml" => FileType::Toml,
-            "sql" => FileType::Sql,
-            "html" => FileType::Html,
-            "css" => FileType::Css,
-            "sass" => FileType::Sass,
-            "exe" => FileType::Application,
-            "png" | "jpg" | "jpeg" | "gif" | "bmp" | "svg" => FileType::Image,
-            "mp4" | "mkv" | "avi" | "mov" | "flv" | "wmv" | "webm" => FileType::Video,
-            "mp3" | "wav" | "flac" | "ogg" | "m4a" | "wma" => FileType::Audio,
-            "zip" | "tar" | "gz" | "7z" | "rar" | "iso" | "dmg" => FileType::Archive,
-            "pdf" => FileType::Pdf,
-            "doc" | "docx" => FileType::Word,
-            "xls" | "xlsx" => FileType::Excel,
-            "ppt" | "pptx" => FileType::Powerpoint,
-            "csv" => FileType::CSV,
-            "app" | "exe" => FileType::Application,
-            "sh" => FileType::UnixShell,
-            "bat" => FileType::WindowsShell,
-            "" => FileType::Directory,
-            _ => FileType::File,
-        },
-        None => FileType::File,
+fn get_filetype_from_extension(file_extension: Option<&str>) -> FileType {
+    match file_extension.unwrap_or("") {
+        "ts" | "tsx" => FileType::Typescript,
+        "js" | "jsx" => FileType::Javascript,
+        "rs" => FileType::Rust,
+        "py" => FileType::Python,
+        "c" => FileType::C,
+        "cpp" => FileType::Cpp,
+        "java" => FileType::Java,
+        "go" => FileType::Go,
+        "txt" => FileType::Text,
+        "md" => FileType::Markdown,
+        "json" => FileType::Json,
+        "xml" => FileType::Xml,
+        "yaml" => FileType::Yaml,
+        "toml" => FileType::Toml,
+        "sql" => FileType::Sql,
+        "html" => FileType::Html,
+        "css" => FileType::Css,
+        "sass" => FileType::Sass,
+        "png" | "jpg" | "jpeg" | "gif" | "bmp" | "svg" => FileType::Image,
+        "mp4" | "mkv" | "avi" | "mov" | "flv" | "wmv" | "webm" => FileType::Video,
+        "mp3" | "wav" | "flac" | "ogg" | "m4a" | "wma" => FileType::Audio,
+        "zip" | "tar" | "gz" | "7z" | "rar" | "iso" | "dmg" => FileType::Archive,
+        "pdf" => FileType::Pdf,
+        "doc" | "docx" => FileType::Word,
+        "xls" | "xlsx" => FileType::Excel,
+        "ppt" | "pptx" => FileType::Powerpoint,
+        "csv" => FileType::CSV,
+        "app" | "exe" => FileType::Application,
+        "sh" => FileType::UnixShell,
+        "bat" => FileType::WindowsShell,
+        "" => FileType::Other,
+        _ => FileType::Other,
     }
 }
 
 const LIMIT: usize = 100;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FileType {
     File,
     Directory,
+    Binary,
     Typescript,
     Javascript,
     Rust,
@@ -105,70 +105,88 @@ pub enum FileType {
     Excel,
     Powerpoint,
     CSV,
+    Other,
 }
 pub struct FileInfo {
-    pub file_name: String,
+    pub file_name: Option<String>,
     pub path: String,
-    pub extension: String,
+    pub extension: Option<String>,
     pub file_type: FileType,
     pub size: u64,
-    pub last_modified: u64,
-    pub created: u64,
+    pub last_modified: Option<u64>,
+    pub created: Option<u64>,
 }
 
 impl FileInfo {
-    pub fn new() -> Self {
-        Self {
-            file_name: "".to_string(),
-            path: "".to_string(),
-            extension: "".to_string(),
-            file_type: FileType::File,
-            size: 0,
-            last_modified: 0,
-            created: 0,
-        }
-    }
-
-    pub fn from_str(filepath: &str) -> Self {
+    pub fn from_str(filepath: &str) -> Option<Self> {
         let path = Path::new(filepath);
-        let file_name = path.to_string_lossy().to_string();
-        let extension = get_extension_from_filename(&file_name);
-        let file_type = get_filetype_from_filename(extension.as_deref());
+        path.file_name()
+            .and_then(|fname| Some(fname.to_string_lossy().to_string()))
+            .and_then(|fname| {
+                let path_str = path.to_string_lossy().to_string();
+                let file_name = path
+                    .file_name()
+                    .and_then(OsStr::to_str)
+                    .and_then(|str| Some(str.to_string()))
+                    .and_then(|a| {
+                        let parts = a.split('.').next();
+                        if parts.is_some() {
+                            Some(parts.unwrap().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|s| s.to_string());
 
-        match fs::metadata(path) {
-            Ok(metadata) => {
-                let size = metadata.len();
-                let last_modified = metadata.modified().unwrap().elapsed().unwrap().as_secs();
-                let created = metadata.created().unwrap().elapsed().unwrap().as_secs();
-                Self {
-                    file_name,
-                    path: filepath.to_string(),
-                    extension: extension.unwrap_or("".to_string()),
-                    file_type,
-                    size,
-                    last_modified,
-                    created,
+                let extension = path
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .and_then(|str| Some(str.to_string()));
+                let file_type = if extension.is_some() {
+                    get_filetype_from_extension(extension.as_deref())
+                } else {
+                    FileType::Other
+                };
+
+                if let Ok(metadata) = fs::metadata(path) {
+                    let size = metadata.len();
+                    let last_modified = metadata
+                        .modified()
+                        .ok()
+                        .and_then(|date| Some(date.elapsed()))
+                        .and_then(|date| date.ok().and_then(|d| Some(d.as_secs())));
+                    let created = metadata
+                        .created()
+                        .ok()
+                        .and_then(|date| Some(date.elapsed()))
+                        .and_then(|date| date.ok().and_then(|d| Some(d.as_secs())));
+                    return Some(Self {
+                        file_name: file_name,
+                        path: filepath.to_string(),
+                        extension,
+                        file_type,
+                        size,
+                        last_modified,
+                        created,
+                    });
                 }
-            }
-            Err(_) => Self {
-                file_name,
-                path: filepath.to_string(),
-                extension: extension.unwrap_or("".to_string()),
-                file_type,
-                size: 0,
-                last_modified: 0,
-                created: 0,
-            },
+                None
+            })
+    }
+
+    pub fn from_string(filepath: String) -> Option<Self> {
+        match Self::from_str(&filepath) {
+            Some(file_info) => Some(file_info),
+            None => None,
         }
     }
 
-    pub fn from_string(filepath: String) -> Self {
-        Self::from_str(&filepath)
+    pub fn from_pathbuf(path: PathBuf) -> Option<Self> {
+        match path.to_str() {
+            Some(path_str) => Self::from_str(path_str),
+            None => None,
+        }
     }
-
-    // pub fn from_path(path: Path) -> Self {
-    //     Self::from_str(path.to_str().unwrap())
-    // }
 }
 
 pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
@@ -185,6 +203,7 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
     let (tx, rx) = crossbeam_channel::unbounded::<String>();
     let settings = AppConfig::new();
     let start = Instant::now();
+
     match settings.get_search_directories() {
         Some(search_dirs) => {
             let mut walker = WalkBuilder::new(search_dirs.get(0)?.clone());
@@ -193,12 +212,12 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
                 .skip(1)
                 .fold(&mut walker, |builder, dir| builder.add(dir))
                 .threads(cmp::min(6, num_cpus::get()))
+                .hidden(true)
                 .build_parallel()
                 .run(|| {
                     let tx = tx.clone();
                     let reg_exp: Regex = regex_search_input.clone();
                     let mut counter: usize = 0;
-                    let str = search_string.clone();
                     Box::new(move |path_entry| {
                         use ignore::WalkState;
                         if counter >= LIMIT {
@@ -207,26 +226,27 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
                         if let Ok(entry) = path_entry {
                             let path = entry.path();
                             if let Some(file_name) = path.file_name() {
+                                let apps = "/Applications";
+                                let system_apps = "/System/Applications";
                                 // Lossy means that if the file name is not valid UTF-8
                                 // it will be replaced with �.
-                                let file_name = file_name.to_string_lossy().to_string();
+                                let fname = file_name.to_string_lossy().to_string();
 
                                 #[cfg(target_os = "macos")]
                                 {
-                                    // MacOS .app files are technically directories
-                                    // so we need to check if the file_name ends with .app
-                                    // and skip decending into that directory
-                                    if file_name.ends_with(".app") {
-                                        if reg_exp.is_match(&file_name) {
-                                            if tx.send(path.to_string_lossy().to_string()).is_ok() {
-                                                counter += 1;
-                                            }
-                                        }
+                                    let path_str = path.to_string_lossy().to_string();
+                                    if (path_str == apps
+                                        || path_str == system_apps
+                                        || path_str.starts_with(apps)
+                                        || path_str.starts_with(system_apps))
+                                        && path.is_dir()
+                                        && !path_str.ends_with(".app")
+                                    {
                                         return WalkState::Skip;
                                     }
                                 }
 
-                                if reg_exp.is_match(&file_name) {
+                                if reg_exp.is_match(&fname) {
                                     if tx.send(path.to_string_lossy().to_string()).is_ok() {
                                         counter += 1;
                                         return WalkState::Continue;
@@ -243,6 +263,7 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
             return Some(
                 rx.iter()
                     .map(|file_path| FileInfo::from_string(file_path))
+                    .flat_map(|x| x)
                     .collect(),
             );
         }

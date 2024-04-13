@@ -16,6 +16,31 @@ pub fn get_cache_path() -> Option<PathBuf> {
     })
 }
 
+pub fn get_app_icon_cache_path() -> Option<PathBuf> {
+    get_cache_path().and_then(|mut dir| {
+        dir.push("app_icons");
+        if let Err(e) = fs::create_dir_all(&dir) {
+            eprintln!("Failed to create directory: {}", e);
+            return None;
+        }
+        return Some(dir);
+    })
+}
+
+pub fn get_cached_app_icon_path(app_name: &str) -> Option<String> {
+    match get_app_icon_cache_path() {
+        None => return None,
+        Some(mut path) => {
+            path.push(format!("{}.png", app_name));
+            if path.exists() {
+                return Some(path.to_string_lossy().to_string());
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
 pub fn get_favicon_cache_path() -> Option<PathBuf> {
     get_cache_path().and_then(|mut dir| {
         dir.push("favicons");
