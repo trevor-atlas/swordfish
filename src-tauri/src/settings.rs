@@ -27,7 +27,7 @@ fn get_default_search_directories() -> Vec<String> {
         vec![
             format!("{}/Desktop", home_path),
             format!("{}/Downloads", home_path),
-            "/System/Applications/Notes.app".to_string(),
+            "/System/Applications".to_string(),
             "/Applications".to_string(),
         ]
     }

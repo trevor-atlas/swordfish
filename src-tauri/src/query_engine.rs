@@ -19,68 +19,6 @@ pub trait QueryInterface {
     fn query(&self, query: Query) -> QueryResult;
 }
 
-use icns::{IconFamily, IconType};
-use plist::Value;
-use std::path::PathBuf;
-
-pub fn cache_app_icon_path(app_bundle_path: &str, app_name: &str) -> Option<PathBuf> {
-    if let Some(icon_path) = get_cached_app_icon_path(&app_name) {
-        return Some(PathBuf::from(icon_path));
-    }
-
-    let mut app_bundle_path = PathBuf::from(app_bundle_path);
-    app_bundle_path.push("Contents");
-    let mut plist_path = app_bundle_path.clone();
-    plist_path.push("Info.plist");
-
-    let info_plist = Value::from_file(plist_path).ok()?;
-
-    let icon_file_name = info_plist
-        .as_dictionary()?
-        .get("CFBundleIconFile")
-        .and_then(Value::as_string)?;
-
-    // macOS does not require the extension for .icns files in the Info.plist.
-    // Ensure it has the .icns extension.
-    let icon_file_name = if icon_file_name.ends_with(".icns") {
-        icon_file_name.to_string()
-    } else {
-        format!("{}.icns", icon_file_name)
-    };
-
-    // Construct the path to the icon file within the .app bundle
-    let icon_path = app_bundle_path
-        .join("Resources")
-        .join(icon_file_name.clone());
-
-    get_app_icon_cache_path()
-        .and_then(|mut dir| {
-            dir.push(format!("{}.png", app_name));
-            Some(dir)
-        })
-        .map(|cache_path| {
-            File::open(icon_path.clone())
-                .ok()
-                .and_then(|f| Some(BufReader::new(f)))
-                .and_then(|file| {
-                    let icon_family = IconFamily::read(file).ok()?;
-                    let file = BufWriter::new(File::create(cache_path.clone()).unwrap());
-                    icon_family
-                        .get_icon_with_type(IconType::RGB24_128x128)
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_512x512_2x))
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_512x512))
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_256x256_2x))
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_256x256))
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_128x128_2x))
-                        .or(icon_family.get_icon_with_type(IconType::RGBA32_128x128))
-                        .ok()
-                        .and_then(|i| i.write_png(file).ok());
-                    Some(cache_path)
-                })
-        })
-        .flatten()
-}
-
 pub struct QueryEngine {}
 
 impl QueryInterface for QueryEngine {
@@ -109,14 +47,11 @@ impl QueryInterface for QueryEngine {
                                 heading: heading.unwrap_or("unnamed file".to_string()),
                                 subheading: item.path.clone(),
                                 value: item.path.clone(),
-                                icon_path: if item.extension == Some("app".to_string())
-                                    && item.file_name.is_some()
-                                {
-                                    cache_app_icon_path(
-                                        item.path.as_str(),
-                                        item.file_name.clone()?.as_str(),
-                                    )
-                                    .map(|p| p.to_string_lossy().to_string())
+                                icon_path: if item.extension == Some("app".to_string()) {
+                                    match item.file_name {
+                                        Some(ref name) => get_cached_app_icon_path(name.as_str()),
+                                        None => None,
+                                    }
                                 } else {
                                     None
                                 },

@@ -2,9 +2,9 @@
 name = "swordfish"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["Trevor Atlas"]
+authors = ["Trevor Atlas <hello@trevoratlas.com>"]
 license = ""
-repository = ""
+repository = "github.com/trevor-atlas/swordfish"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -23,7 +23,6 @@ glob = "0.3"
 thiserror = "1.0"
 url = "2.5"
 toml = "0.8"
-rust_search = "2.1.0"
 ignore = "0.4.22"
 crossbeam-channel = "0.5"
 walkdir = "2.5"
@@ -34,16 +33,11 @@ chrono = "0.4"
 reqwest = { version = "0.12", features = ["json"] }
 tokio = {version = "1.37", features = ["full"] }
 plist = "1.6"
-bitflags = "2.5"
 icns = "0.3.1"
-
-[target."cfg(target_os = \"macos\")".dependencies]
-core-graphics = { version = "0.23" }
-core-foundation = { version = "0.9" }
-cocoa = { version = "0.25" }
-objc = { version = "0.2" }
-objc_id = { version = "0.1" }
-objc-foundation = { version = "0.1" }
+zmq = "0.10.0"
+rayon = "1.10.0"
+globset = "0.4.14"
+tracing = "0.1.40"
 
 [features]
 default = ["custom-protocol"]

@@ -1,5 +1,6 @@
 use crate::query::Query;
 use crate::settings::AppConfig;
+use crate::utilities::cache_app_icon_path;
 
 use ignore::WalkBuilder;
 use regex::Regex;
@@ -7,11 +8,13 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::cmp;
 use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 
 use std::path::Path;
+use std::thread;
 use std::time::Instant;
 
 fn get_extension_from_filename(filename: &str) -> Option<String> {
@@ -195,7 +198,6 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
     if !search_string.chars().any(|c| c.is_uppercase()) {
         search_string = format!("(?i){}", search_string);
     }
-    println!("search_string: {}", search_string);
     let regex_search_input = match Regex::new(&search_string) {
         Ok(regex) => regex,
         Err(e) => return None,
@@ -223,28 +225,40 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
                         if counter >= LIMIT {
                             return WalkState::Quit;
                         }
+
                         if let Ok(entry) = path_entry {
                             let path = entry.path();
+
+                            #[cfg(target_os = "macos")]
+                            {
+                                if path.extension() == Some(&OsString::from("app"))
+                                    && path.file_name().is_some()
+                                {
+                                    let app_path = path;
+                                    cache_app_icon_path(
+                                        app_path.to_string_lossy().to_string().as_str(),
+                                        app_path
+                                            .file_stem()
+                                            .unwrap()
+                                            .to_string_lossy()
+                                            .to_string()
+                                            .as_str(),
+                                    );
+                                }
+
+                                let path_str = path.to_string_lossy().to_string();
+                                if (path.starts_with("/Applications/")
+                                    || path.starts_with("/System/Applications/"))
+                                    && path_str.ends_with("/Contents")
+                                {
+                                    return WalkState::Skip;
+                                }
+                            }
+
                             if let Some(file_name) = path.file_name() {
-                                let apps = "/Applications";
-                                let system_apps = "/System/Applications";
                                 // Lossy means that if the file name is not valid UTF-8
                                 // it will be replaced with �.
                                 let fname = file_name.to_string_lossy().to_string();
-
-                                #[cfg(target_os = "macos")]
-                                {
-                                    let path_str = path.to_string_lossy().to_string();
-                                    if (path_str == apps
-                                        || path_str == system_apps
-                                        || path_str.starts_with(apps)
-                                        || path_str.starts_with(system_apps))
-                                        && path.is_dir()
-                                        && !path_str.ends_with(".app")
-                                    {
-                                        return WalkState::Skip;
-                                    }
-                                }
 
                                 if reg_exp.is_match(&fname) {
                                     if tx.send(path.to_string_lossy().to_string()).is_ok() {

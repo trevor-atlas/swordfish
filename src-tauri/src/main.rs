@@ -15,11 +15,13 @@ mod windows;
 use crate::{
     search::filename::search,
     tray::{handle_tray_event, make_tray},
+    utilities::cache_all_app_icons,
     windows::{
         acquire_main_window, acquire_settings_window, hide_main_window, hide_settings_window,
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
+use tracing::{debug, error, info, trace, warn};
 
 use datasource::DataSource as _;
 
@@ -32,22 +34,35 @@ use tauri::{App, Manager, State};
 use tokio;
 
 fn handle_shortcuts(app: &App) {
+    let s: State<AppState> = app.state();
     let mut gsm = app.global_shortcut_manager();
     let h = app.app_handle();
     let w = acquire_main_window(&h);
-    match gsm.register("Control+Space", move || {
-        if let Ok(bool) = w.is_visible() {
-            if bool {
-                h.emit_all("appwindow:hidden", ()).ok();
-                hide_main_window(h.clone());
-            } else {
-                show_main_window(h.clone());
-            }
-        }
-    }) {
-        Ok(_) => println!("Registered the shortcut successfully"),
-        Err(e) => println!("Error registering global shortcut: {}", e),
-    };
+    s.config
+        .lock()
+        .map(|config| config.read().launch_shortcut)
+        .ok()
+        .and_then(|shortcut| {
+            gsm.register(shortcut.as_str(), move || {
+                if let Ok(bool) = w.is_visible() {
+                    if bool {
+                        h.emit_all("appwindow:hidden", ()).ok();
+                        hide_main_window(h.clone());
+                    } else {
+                        show_main_window(h.clone());
+                    }
+                }
+            })
+            .ok()
+        })
+        .and_then(|_| {
+            info!("Global shortcuts registered");
+            None::<()>
+        })
+        .or_else(|| {
+            error!("Failed to register global shortcut");
+            None
+        });
 }
 
 struct AppState {
@@ -57,6 +72,10 @@ struct AppState {
 async fn main() {
     let QUERY_ENGINE: QueryEngine = QueryEngine::new();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
+    #[cfg(target_os = "macos")]
+    {
+        cache_all_app_icons();
+    }
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -80,16 +99,6 @@ async fn main() {
 
             let app_handle = app.app_handle();
 
-            let s: State<AppState> = app.state();
-            let mut lock = s.config.try_lock();
-            if let Ok(ref mut mutex) = lock {
-                mutex
-                    .get_search_directories()
-                    .iter()
-                    .for_each(|p| println!("{:?}", p));
-            } else {
-                println!("try_lock failed");
-            }
             let main_window = acquire_main_window(&app_handle);
             main_window.set_always_on_top(true)?;
             if env::var_os("SWORDFISH_DEV").is_some() && !main_window.is_devtools_open() {
