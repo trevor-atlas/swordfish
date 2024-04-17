@@ -2,7 +2,7 @@ use crate::{
     browser::browser::{collate_browser_history_data, query_collated_db, HistoryEntry},
     query::Query,
 };
-use std::{sync::mpsc, thread, time::SystemTime};
+use std::{sync::mpsc, time::SystemTime};
 
 pub struct BrowserHistoryDataSource {
     pub last_updated: u64,

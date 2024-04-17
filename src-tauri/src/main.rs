@@ -13,7 +13,6 @@ mod utilities;
 mod windows;
 
 use crate::{
-    search::filename::search,
     tray::{handle_tray_event, make_tray},
     utilities::cache_all_app_icons,
     windows::{
@@ -21,11 +20,11 @@ use crate::{
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
-use tracing::{debug, error, info, trace, warn};
+use tracing::{error, info};
 
 use datasource::DataSource as _;
 
-use query::Query;
+
 use query_engine::{QueryEngine, QueryInterface};
 use settings::AppConfig;
 use std::{env, sync::Mutex};
@@ -110,7 +109,7 @@ async fn main() {
 
             let handle = app.handle();
 
-            let id = app_handle.listen_global("query", move |event| {
+            let _id = app_handle.listen_global("query", move |event| {
                 if let Some(str) = event.payload() {
                     if let Ok(query) = serde_json::from_str(str) {
                         let res = QUERY_ENGINE.query(query);

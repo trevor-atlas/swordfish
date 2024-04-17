@@ -1,6 +1,4 @@
 use std::{
-    fs::File,
-    io::{BufReader, BufWriter},
     sync::mpsc,
     thread::spawn,
 };
@@ -10,7 +8,7 @@ use crate::{
     query::{Preview, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
     search::filename::search,
     utilities::{
-        get_app_icon_cache_path, get_cache_path, get_cached_app_icon_path, get_favicon_path,
+        get_cached_app_icon_path, get_favicon_path,
     },
 };
 

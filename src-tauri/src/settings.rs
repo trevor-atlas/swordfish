@@ -1,15 +1,13 @@
 use std::{
-    env,
-    fs::{self, File},
-    io::{self, Read, Write},
-    path::PathBuf,
+    fs::{File},
+    io::{Read, Write},
 };
 
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
-use url::form_urlencoded::Target;
 
-use crate::utilities::{config_dir, config_filepath};
+
+use crate::utilities::{config_filepath};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {

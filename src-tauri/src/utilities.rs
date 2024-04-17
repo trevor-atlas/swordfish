@@ -6,7 +6,7 @@ use std::{
     env,
     fs::{self, File},
     io::{BufReader, BufWriter},
-    path::{Path, PathBuf},
+    path::{PathBuf},
     thread,
 };
 use url::Url;

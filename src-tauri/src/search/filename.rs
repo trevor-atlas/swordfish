@@ -10,11 +10,11 @@ use std::cmp;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::File;
+
 use std::path::PathBuf;
 
 use std::path::Path;
-use std::thread;
+
 use std::time::Instant;
 
 fn get_extension_from_filename(filename: &str) -> Option<String> {
@@ -30,7 +30,7 @@ fn get_extension_from_filename(filename: &str) -> Option<String> {
                 .last()?
                 .to_string(),
         ),
-        Err(e) => None,
+        Err(_e) => None,
     }
 }
 
@@ -125,8 +125,8 @@ impl FileInfo {
         let path = Path::new(filepath);
         path.file_name()
             .and_then(|fname| Some(fname.to_string_lossy().to_string()))
-            .and_then(|fname| {
-                let path_str = path.to_string_lossy().to_string();
+            .and_then(|_fname| {
+                let _path_str = path.to_string_lossy().to_string();
                 let file_name = path
                     .file_name()
                     .and_then(OsStr::to_str)
@@ -200,7 +200,7 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
     }
     let regex_search_input = match Regex::new(&search_string) {
         Ok(regex) => regex,
-        Err(e) => return None,
+        Err(_e) => return None,
     };
     let (tx, rx) = crossbeam_channel::unbounded::<String>();
     let settings = AppConfig::new();
