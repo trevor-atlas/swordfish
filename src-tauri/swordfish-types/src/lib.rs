@@ -91,32 +91,34 @@ pub enum ResultPreview {
 }
 
 #[derive(TS, Serialize, Deserialize, Debug, Clone)]
-#[ts(export, export_to = "../../../src/types/", rename_all = "lowercase")]
+#[ts(export, export_to = "../../../src/types/")]
 pub enum SFEvent {
-    #[serde(rename = "mainwindow:shown")]
     MainWindowShown,
-    #[serde(rename = "mainwindow:hidden")]
     MainWindowHidden,
-    #[serde(rename = "mainwindow:resized")]
     MainWindowResized,
+    Query,
+    QueryResult,
 }
 
-impl fmt::Display for SFEvent {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            SFEvent::MainWindowShown => write!(f, "mainwindow:shown"),
-            SFEvent::MainWindowHidden => write!(f, "mainwindow:hidden"),
-            SFEvent::MainWindowResized => write!(f, "mainwindow:resized"),
-        }
-    }
-}
+// an action takes the info it receives, does something with it, and returns nothing.
+//   In other words: it acts on something and then exits, returning nothing back to the calling hook.
+// a filter takes the info it receives, modifies it somehow, and returns it.
+//   In other words: it filters something and passes it back to the hook for further use.
+
+const SHOWN: &'static str = "MainWindowShown";
+const HIDDEN: &'static str = "MainWindowHidden";
+const RESIZED: &'static str = "MainWindowResized";
+const QUERY: &'static str = "Query";
+const QUERY_RESULT: &'static str = "QueryResult";
 
 impl AsRef<str> for SFEvent {
     fn as_ref(&self) -> &str {
         match self {
-            SFEvent::MainWindowShown => "mainwindow:shown",
-            SFEvent::MainWindowHidden => "mainwindow:hidden",
-            SFEvent::MainWindowResized => "mainwindow:resized",
+            SFEvent::MainWindowShown => SHOWN,
+            SFEvent::MainWindowHidden => HIDDEN,
+            SFEvent::MainWindowResized => RESIZED,
+            SFEvent::Query => QUERY,
+            SFEvent::QueryResult => QUERY_RESULT,
         }
     }
 }
@@ -126,9 +128,11 @@ impl FromStr for SFEvent {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "mainwindow:shown" => Ok(SFEvent::MainWindowShown),
-            "mainwindow:hidden" => Ok(SFEvent::MainWindowHidden),
-            "mainwindow:resized" => Ok(SFEvent::MainWindowResized),
+            SHOWN => Ok(SFEvent::MainWindowShown),
+            HIDDEN => Ok(SFEvent::MainWindowHidden),
+            RESIZED => Ok(SFEvent::MainWindowResized),
+            QUERY => Ok(SFEvent::Query),
+            QUERY_RESULT => Ok(SFEvent::QueryResult),
             _ => Err(()),
         }
     }

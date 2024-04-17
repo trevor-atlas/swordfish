@@ -30,7 +30,9 @@ impl QueryInterface for QueryEngine {
         }
         let mut results: Vec<QueryResultItem> = vec![];
         if let Some(calculator_result) = get_calculator_result(&query) {
-            results.push(calculator_result);
+            if calculator_result.heading != query.search_string {
+                results.push(calculator_result);
+            }
         }
         match query.mode {
             QueryMode::Search => {

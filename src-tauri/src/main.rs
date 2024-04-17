@@ -101,11 +101,11 @@ async fn main() {
 
             let handle = app.handle();
 
-            let _id = app_handle.listen_global("query", move |event| {
+            let _id = app_handle.listen_global(SFEvent::Query.as_ref(), move |event| {
                 if let Some(str) = event.payload() {
                     if let Ok(query) = serde_json::from_str(str) {
                         let res = query_engine.query(query);
-                        let _ = handle.emit_all("query", res);
+                        let _ = handle.emit_all(SFEvent::QueryResult.as_ref(), res);
                     }
                 }
             });

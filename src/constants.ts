@@ -1,4 +1,5 @@
 import { QueryMode } from './types/QueryMode';
+import { SFEvent } from './types/SFEvent';
 
 export const CHAT: QueryMode = 'Chat';
 export const SEARCH: QueryMode = 'Search';
@@ -12,3 +13,11 @@ export const QUERY_MODES: QueryMode[] = [
 ] as const;
 
 export const NUMERIC = /\d+/;
+
+export const LifecycleEvent = Object.freeze({
+  MainWindowShown: 'MainWindowShown',
+  MainWindowHidden: 'MainWindowHidden',
+  MainWindowResized: 'MainWindowResized',
+  Query: 'Query',
+  QueryResult: 'QueryResult',
+}) satisfies Record<SFEvent, SFEvent>;

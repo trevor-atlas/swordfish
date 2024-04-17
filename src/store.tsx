@@ -1,13 +1,11 @@
 import { createContext, JSX, onMount, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { NUMERIC, QUERY_MODES } from './constants';
+import { LifecycleEvent, NUMERIC, QUERY_MODES } from './constants';
 import { hide } from './invocations';
 import { Nullable } from './types';
-
 import { emit, listen } from '@tauri-apps/api/event';
 import { QueryResult } from './types/QueryResult';
 import { QueryResultItem } from './types/QueryResultItem';
-import { SFEvent } from './types/SFEvent';
 
 type StoreState = {
   search_string: string;
@@ -56,14 +54,14 @@ export function StoreProvider(props: { children: JSX.Element }) {
   const [state, setState] = createStore<StoreState>(defaultState);
 
   onMount(() => {
-    listen('query', (data) => {
+    listen<QueryResult>(LifecycleEvent.QueryResult, (data) => {
       if (!data || !data.payload) {
         return;
       }
       setState('queryResult', data.payload);
     });
-    listen<SFEvent>('mainwindow:hidden', () => {
-      console.log('mainwindow:hidden');
+    listen(LifecycleEvent.MainWindowHidden, () => {
+      console.log('main window hidden');
       resetAndHide();
     });
   });
@@ -74,7 +72,10 @@ export function StoreProvider(props: { children: JSX.Element }) {
     } else {
       setState(() => ({ search_string: str, touched: true }));
     }
-    emit('query', { mode: QUERY_MODES[state.mode], search_string: str });
+    emit(LifecycleEvent.Query, {
+      mode: QUERY_MODES[state.mode],
+      search_string: str,
+    });
   }
 
   async function resetAndHide() {
@@ -92,7 +93,7 @@ export function StoreProvider(props: { children: JSX.Element }) {
     setState('mode', (s) => {
       if (!isAdvancing) {
         const newMode = s - 1 < 0 ? QUERY_MODES.length - 1 : s - 1;
-        emit('query', {
+        emit(LifecycleEvent.Query, {
           mode: QUERY_MODES[newMode],
           search_string: state.search_string,
         });
@@ -100,7 +101,7 @@ export function StoreProvider(props: { children: JSX.Element }) {
       }
 
       const newMode = s + 1 > QUERY_MODES.length - 1 ? 0 : s + 1;
-      emit('query', {
+      emit(LifecycleEvent.Query, {
         mode: QUERY_MODES[newMode],
         search_string: state.search_string,
       });
@@ -132,7 +133,10 @@ export function StoreProvider(props: { children: JSX.Element }) {
         const idx = s.prev_search_index + 1;
         const search =
           s.prev_search[idx % s.prev_search.length] || s.search_string;
-        emit('query', { mode: QUERY_MODES[state.mode], search_string: search });
+        emit(LifecycleEvent.Query, {
+          mode: QUERY_MODES[state.mode],
+          search_string: search,
+        });
         return {
           prev_search_index: idx,
           search_string: search,
