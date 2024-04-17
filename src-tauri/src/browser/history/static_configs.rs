@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub fn arc_path() -> Option<String> {
     #[cfg(target_os = "macos")]
     {

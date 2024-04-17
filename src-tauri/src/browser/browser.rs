@@ -1,5 +1,5 @@
-use chrono::{Months};
-use chrono::{Local};
+use chrono::Local;
+use chrono::Months;
 use dirs::{data_dir, home_dir};
 use glob::glob;
 use rusqlite::{params, Connection, Result};
@@ -9,11 +9,11 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fs, thread};
+use swordfish_types::Query;
 use thiserror::Error;
 use tokio::spawn;
-use url::{Url};
+use url::Url;
 
-use crate::query::Query;
 use crate::utilities::get_favicon_cache_path;
 
 use super::history::static_configs::{

@@ -4,7 +4,6 @@
 mod browser;
 mod constants;
 mod datasource;
-mod query;
 mod query_engine;
 mod search;
 mod settings;
@@ -20,17 +19,13 @@ use crate::{
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
-use tracing::{error, info};
-
-use datasource::DataSource as _;
-
-
 use query_engine::{QueryEngine, QueryInterface};
 use settings::AppConfig;
 use std::{env, sync::Mutex};
-use tauri::GlobalShortcutManager;
-use tauri::{App, Manager, State};
+use swordfish_types::SFEvent;
+use tauri::{App, GlobalShortcutManager, Manager, State};
 use tokio;
+use tracing::{error, info};
 
 fn handle_shortcuts(app: &App) {
     let s: State<AppState> = app.state();
@@ -45,9 +40,10 @@ fn handle_shortcuts(app: &App) {
             gsm.register(shortcut.as_str(), move || {
                 if let Ok(bool) = w.is_visible() {
                     if bool {
-                        h.emit_all("appwindow:hidden", ()).ok();
+                        h.emit_all(SFEvent::MainWindowHidden.as_ref(), ()).ok();
                         hide_main_window(h.clone());
                     } else {
+                        h.emit_all(SFEvent::MainWindowShown.as_ref(), ()).ok();
                         show_main_window(h.clone());
                     }
                 }
@@ -69,12 +65,8 @@ struct AppState {
 }
 #[tokio::main]
 async fn main() {
-    let QUERY_ENGINE: QueryEngine = QueryEngine::new();
+    let query_engine = QueryEngine::new();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
-    #[cfg(target_os = "macos")]
-    {
-        cache_all_app_icons();
-    }
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -112,7 +104,7 @@ async fn main() {
             let _id = app_handle.listen_global("query", move |event| {
                 if let Some(str) = event.payload() {
                     if let Ok(query) = serde_json::from_str(str) {
-                        let res = QUERY_ENGINE.query(query);
+                        let res = query_engine.query(query);
                         let _ = handle.emit_all("query", res);
                     }
                 }

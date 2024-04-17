@@ -1,16 +1,10 @@
-use crate::{
-    browser::browser::{collate_browser_history_data, query_collated_db, HistoryEntry},
-    query::Query,
-};
+use swordfish_types::{DataSource, Query};
+
+use crate::browser::browser::{collate_browser_history_data, query_collated_db, HistoryEntry};
 use std::{sync::mpsc, time::SystemTime};
 
 pub struct BrowserHistoryDataSource {
     pub last_updated: u64,
-}
-pub trait DataSource<T> {
-    fn new() -> Self;
-    fn update_cache(&mut self);
-    fn query(&self, query: &Query) -> Option<T>; // Assuming a simple String return type for the example
 }
 
 impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
@@ -18,7 +12,7 @@ impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
         Self { last_updated: 0 }
     }
 
-    fn update_cache(&mut self) {
+    fn update_cache() {
         let (tx, rx) = mpsc::channel();
         tokio::spawn(async move {
             let result = collate_browser_history_data();
@@ -26,7 +20,6 @@ impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
                 println!("Error updating browser history cache: {}", e);
             });
         });
-        self.last_updated = ts();
 
         let _ = rx.recv().map_err(|e| {
             println!("Unknown error while combining browser histories: {}", e);

@@ -2,11 +2,12 @@ import { createContext, JSX, onMount, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { NUMERIC, QUERY_MODES } from './constants';
 import { hide } from './invocations';
-import { Nullable, QueryResponse, QueryResultEntry } from './types';
+import { Nullable } from './types';
 
 import { emit, listen } from '@tauri-apps/api/event';
-
-const voidFN = () => {};
+import { QueryResult } from './types/QueryResult';
+import { QueryResultItem } from './types/QueryResultItem';
+import { SFEvent } from './types/SFEvent';
 
 type StoreState = {
   search_string: string;
@@ -15,7 +16,7 @@ type StoreState = {
   touched: boolean;
   mode: number;
   cursor: number;
-  queryResult: QueryResponse;
+  queryResult: QueryResult;
 };
 
 type Store = [
@@ -28,18 +29,18 @@ type Store = [
     cursorUp(): void;
     cursorDown(): void;
     resetAndHide(): void;
-    getSelectedResult(): Nullable<QueryResultEntry>;
+    getSelectedResult(): Nullable<QueryResultItem>;
   },
 ];
 
-const defaultState = {
+const defaultState: StoreState = {
   search_string: '',
   prev_search: [],
   prev_search_index: 0,
   touched: false,
   mode: 0,
-  queryResult: { inline_result: '', results: [] },
   cursor: 0,
+  queryResult: { results: [] },
 };
 
 export const StoreContext = createContext<Store>([
@@ -61,7 +62,8 @@ export function StoreProvider(props: { children: JSX.Element }) {
       }
       setState('queryResult', data.payload);
     });
-    listen('appwindow:hidden', () => {
+    listen<SFEvent>('mainwindow:hidden', () => {
+      console.log('mainwindow:hidden');
       resetAndHide();
     });
   });

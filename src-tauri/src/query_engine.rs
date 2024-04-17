@@ -1,15 +1,13 @@
-use std::{
-    sync::mpsc,
-    thread::spawn,
+use std::{fs::File, sync::mpsc, thread::spawn};
+
+use swordfish_types::{
+    DataSource, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType, ResultPreview,
 };
 
 use crate::{
-    datasource::{BrowserHistoryDataSource, DataSource},
-    query::{Preview, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType},
-    search::filename::search,
-    utilities::{
-        get_cached_app_icon_path, get_favicon_path,
-    },
+    datasource::BrowserHistoryDataSource,
+    search::filename::{search, FileDataSource},
+    utilities::{cache_all_app_icons, get_cached_app_icon_path, get_favicon_path},
 };
 
 pub trait QueryInterface {
@@ -21,7 +19,8 @@ pub struct QueryEngine {}
 
 impl QueryInterface for QueryEngine {
     fn new() -> Self {
-        BrowserHistoryDataSource::new().update_cache();
+        BrowserHistoryDataSource::update_cache();
+        FileDataSource::update_cache();
         Self {}
     }
 
@@ -53,7 +52,7 @@ impl QueryInterface for QueryEngine {
                                 } else {
                                     None
                                 },
-                                preview: Some(Preview::File {
+                                preview: Some(ResultPreview::File {
                                     path: item.path.clone(),
                                     filename: item.file_name.clone(),
                                     extension: item.extension.clone(),
@@ -122,7 +121,7 @@ fn get_calculator_result(query: &Query) -> Option<QueryResultItem> {
         if fend_result.get_main_result().is_empty() {
             return None;
         }
-        let preview = Preview::Calculator {
+        let preview = ResultPreview::Calculator {
             parsed_content: format!(
                 "<span class=\"calculator\">{}</span>",
                 fend_result

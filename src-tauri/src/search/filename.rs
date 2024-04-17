@@ -1,38 +1,17 @@
-use crate::query::Query;
 use crate::settings::AppConfig;
-use crate::utilities::cache_app_icon_path;
+use crate::utilities::{cache_all_app_icons, cache_app_icon_path};
 
 use ignore::WalkBuilder;
 use regex::Regex;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::cmp;
-use std::ffi::OsStr;
-use std::ffi::OsString;
-use std::fs;
-
-use std::path::PathBuf;
-
-use std::path::Path;
-
-use std::time::Instant;
-
-fn get_extension_from_filename(filename: &str) -> Option<String> {
-    // Change it to a canonical file path.
-    match Path::new(&filename).canonicalize() {
-        Ok(path) => Some(
-            path.to_str()?
-                .split('/')
-                .map(|str| str.to_string())
-                .collect::<Vec<String>>()
-                .last()?
-                .split('.')
-                .last()?
-                .to_string(),
-        ),
-        Err(_e) => None,
-    }
-}
+use std::{
+    ffi::{OsStr, OsString},
+    fs,
+    path::Path,
+    time::Instant,
+};
+use swordfish_types::{DataSource, Query};
 
 fn get_filetype_from_extension(file_extension: Option<&str>) -> FileType {
     match file_extension.unwrap_or("") {
@@ -127,24 +106,9 @@ impl FileInfo {
             .and_then(|fname| Some(fname.to_string_lossy().to_string()))
             .and_then(|_fname| {
                 let _path_str = path.to_string_lossy().to_string();
-                let file_name = path
-                    .file_name()
-                    .and_then(OsStr::to_str)
-                    .and_then(|str| Some(str.to_string()))
-                    .and_then(|a| {
-                        let parts = a.split('.').next();
-                        if parts.is_some() {
-                            Some(parts.unwrap().to_string())
-                        } else {
-                            None
-                        }
-                    })
-                    .map(|s| s.to_string());
+                let file_name = path.file_stem().and_then(OsStr::to_str).map(str::to_string);
 
-                let extension = path
-                    .extension()
-                    .and_then(OsStr::to_str)
-                    .and_then(|str| Some(str.to_string()));
+                let extension = path.extension().and_then(OsStr::to_str).map(str::to_string);
                 let file_type = if extension.is_some() {
                     get_filetype_from_extension(extension.as_deref())
                 } else {
@@ -180,13 +144,6 @@ impl FileInfo {
     pub fn from_string(filepath: String) -> Option<Self> {
         match Self::from_str(&filepath) {
             Some(file_info) => Some(file_info),
-            None => None,
-        }
-    }
-
-    pub fn from_pathbuf(path: PathBuf) -> Option<Self> {
-        match path.to_str() {
-            Some(path_str) => Self::from_str(path_str),
             None => None,
         }
     }
@@ -284,5 +241,23 @@ pub fn search(query: &Query) -> Option<Vec<FileInfo>> {
         None => {
             return None;
         }
+    }
+}
+
+pub struct FileDataSource {
+    pub last_updated: u64,
+}
+
+impl DataSource<Vec<FileInfo>> for FileDataSource {
+    fn new() -> Self {
+        Self { last_updated: 0 }
+    }
+
+    fn update_cache() {
+        cache_all_app_icons();
+    }
+
+    fn query(&self, query: &Query) -> Option<Vec<FileInfo>> {
+        search(query)
     }
 }

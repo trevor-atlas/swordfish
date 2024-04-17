@@ -1,13 +1,12 @@
 use std::{
-    fs::{File},
+    fs::File,
     io::{Read, Write},
 };
 
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 
-
-use crate::utilities::{config_filepath};
+use crate::utilities::config_filepath;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
@@ -37,6 +36,8 @@ fn get_default_search_directories() -> Vec<String> {
         ]
     }
 }
+
+// builder pattern example
 
 // struct Something {
 //     field1: String,
@@ -143,13 +144,13 @@ impl AppConfig {
             .unwrap_or(self.clone())
     }
 
-    pub fn from_json(&self, f: String) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(&f)
-    }
+    // pub fn from_json(&self, f: String) -> Result<Self, serde_json::Error> {
+    //     serde_json::from_str(&f)
+    // }
 
-    pub fn to_json(&self) -> serde_json::Result<String> {
-        serde_json::to_string_pretty(self)
-    }
+    // pub fn to_json(&self) -> serde_json::Result<String> {
+    //     serde_json::to_string_pretty(self)
+    // }
 
     pub fn to_toml(&self) -> Result<String, toml::ser::Error> {
         toml::to_string_pretty(self)
