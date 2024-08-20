@@ -1,3 +1,4 @@
+use swordfish_types::SFEvent;
 use tauri::AppHandle;
 
 use tauri::{utils::config::WindowUrl, window::WindowBuilder, Manager};
@@ -11,7 +12,7 @@ pub fn hide_main_window(app: AppHandle) {
     if let Ok(_) = window.hide() {
         #[cfg(target_os = "macos")]
         {
-            _ = app.hide();
+            // _ = app.hide();
         }
         _ = menu_item.set_title("Show");
     };
@@ -24,7 +25,7 @@ pub fn show_main_window(app: AppHandle) {
     if let Ok(_) = window.show() {
         #[cfg(target_os = "macos")]
         {
-            _ = app.show();
+            // _ = app.show();
         }
 
         _ = window.center();
@@ -49,6 +50,8 @@ pub fn toggle_main_window(app: AppHandle) {
 pub fn hide_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
     if let Ok(_) = window.hide() {
+        app.emit_all(SFEvent::SettingsWindowHidden.as_ref(), ())
+            .ok();
         // _ = app.hide();
         // _ = menu_item.set_title("Show");
     };
@@ -59,6 +62,7 @@ pub fn show_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
     if let Ok(_) = window.show() {
         _ = window.set_focus();
+        app.emit_all(SFEvent::SettingsWindowShown.as_ref(), ()).ok();
     };
 }
 

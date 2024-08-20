@@ -1,15 +1,8 @@
-/* @refresh reload */
-import { render } from 'solid-js/web';
+import { createRoot } from 'react-dom/client';
 
 import './styles.scss';
-import App from './App';
-import { StoreProvider } from './store';
+import App from './react/ReactApp';
+import { useStore } from './react/reactStore';
 
-render(
-  () => (
-    <StoreProvider>
-      <App />
-    </StoreProvider>
-  ),
-  document.getElementById('root') as HTMLElement,
-);
+createRoot(document.getElementById('root')!).render(<App />);
+useStore.getState().init();

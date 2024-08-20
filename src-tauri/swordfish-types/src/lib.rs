@@ -96,6 +96,8 @@ pub enum SFEvent {
     MainWindowShown,
     MainWindowHidden,
     MainWindowResized,
+    SettingsWindowShown,
+    SettingsWindowHidden,
     Query,
     QueryResult,
 }
@@ -105,8 +107,10 @@ pub enum SFEvent {
 // a filter takes the info it receives, modifies it somehow, and returns it.
 //   In other words: it filters something and passes it back to the hook for further use.
 
-const SHOWN: &'static str = "MainWindowShown";
-const HIDDEN: &'static str = "MainWindowHidden";
+const MAIN_WINDOW_SHOWN: &'static str = "MainWindowShown";
+const MAIN_WINDOW_HIDDEN: &'static str = "MainWindowHidden";
+const SETTINGS_WINDOW_SHOWN: &'static str = "SettingsWindowShown";
+const SETTINGS_WINDOW_HIDDEN: &'static str = "SettingsWindowHidden";
 const RESIZED: &'static str = "MainWindowResized";
 const QUERY: &'static str = "Query";
 const QUERY_RESULT: &'static str = "QueryResult";
@@ -114,11 +118,13 @@ const QUERY_RESULT: &'static str = "QueryResult";
 impl AsRef<str> for SFEvent {
     fn as_ref(&self) -> &str {
         match self {
-            SFEvent::MainWindowShown => SHOWN,
-            SFEvent::MainWindowHidden => HIDDEN,
+            SFEvent::MainWindowShown => MAIN_WINDOW_SHOWN,
+            SFEvent::MainWindowHidden => MAIN_WINDOW_HIDDEN,
             SFEvent::MainWindowResized => RESIZED,
             SFEvent::Query => QUERY,
             SFEvent::QueryResult => QUERY_RESULT,
+            SFEvent::SettingsWindowShown => SETTINGS_WINDOW_SHOWN,
+            SFEvent::SettingsWindowHidden => SETTINGS_WINDOW_HIDDEN,
         }
     }
 }
@@ -128,8 +134,10 @@ impl FromStr for SFEvent {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            SHOWN => Ok(SFEvent::MainWindowShown),
-            HIDDEN => Ok(SFEvent::MainWindowHidden),
+            MAIN_WINDOW_SHOWN => Ok(SFEvent::MainWindowShown),
+            MAIN_WINDOW_HIDDEN => Ok(SFEvent::MainWindowHidden),
+            SETTINGS_WINDOW_SHOWN => Ok(SFEvent::SettingsWindowShown),
+            SETTINGS_WINDOW_HIDDEN => Ok(SFEvent::SettingsWindowHidden),
             RESIZED => Ok(SFEvent::MainWindowResized),
             QUERY => Ok(SFEvent::Query),
             QUERY_RESULT => Ok(SFEvent::QueryResult),

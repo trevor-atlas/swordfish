@@ -1,7 +1,7 @@
-import { MouseEventHandler, useRef } from 'react';
-import { useStore } from './store';
-import { Nullable } from './types';
+import { getSelectedResult, openResult, useStore } from './reactStore';
+import { Nullable } from '../types';
 import { convertFileSrc } from '@tauri-apps/api/tauri';
+import { MouseEventHandler, useCallback, useRef } from 'react';
 
 interface ResultProps {
   iconPath: Nullable<string>;
@@ -18,37 +18,49 @@ export default function SearchResult({
   iconPath,
   index,
 }: ResultProps) {
-  const [state, { setCursor }] = useStore();
+  const { cursor, setCursor } = useStore();
 
   const ref = useRef<HTMLLIElement>(null);
 
-  const handleMouseEvent = (event: MouseEventHandler<HTMLLIElement>) => {
-    if (
-      event.screenX !== lastMousePos.x ||
-      (event.screenY !== lastMousePos.y && state.cursor !== index)
-    ) {
-      setCursor(index);
-    }
-    lastMousePos.x = event.screenX;
-    lastMousePos.y = event.screenY;
-  };
+  const handleMouseEvent: MouseEventHandler<HTMLLIElement> = useCallback(
+    (event) => {
+      if (
+        event.screenX !== lastMousePos.x ||
+        (event.screenY !== lastMousePos.y && cursor !== index)
+      ) {
+        setCursor(index);
+      }
+      lastMousePos.x = event.screenX;
+      lastMousePos.y = event.screenY;
+    },
+    [],
+  );
+
+  const handleClick = useCallback(async () => {
+    const value = getSelectedResult();
+    console.log('open result', value);
+    await openResult(value);
+  }, []);
 
   return (
     <li
       ref={ref}
-      class={`${state.cursor === index ? 'active' : ''} query-result query-result-${index}`}
+      className={`${cursor === index ? 'active' : ''} query-result query-result-${index}`}
       onMouseEnter={handleMouseEvent}
       onMouseMove={handleMouseEvent}
+      onClick={handleClick}
     >
       <div className="result-content">
         <div className="flex items-center">
-          <Show when={iconPath}>
-            <img
-              className="result-icon"
-              src={convertFileSrc(iconPath)}
-              alt="icon"
-            />
-          </Show>
+          {iconPath && (
+            <div className="result-icon-container">
+              <img
+                className="result-icon"
+                src={convertFileSrc(iconPath)}
+                alt="icon"
+              />
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="result-heading">{heading || <NoTitle />}</span>
             <span className="result-subtext">{subtext}</span>

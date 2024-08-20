@@ -17,6 +17,8 @@ export const NUMERIC = /\d+/;
 export const LifecycleEvent = Object.freeze({
   MainWindowShown: 'MainWindowShown',
   MainWindowHidden: 'MainWindowHidden',
+  SettingsWindowShown: 'SettingsWindowShown',
+  SettingsWindowHidden: 'SettingsWindowHidden',
   MainWindowResized: 'MainWindowResized',
   Query: 'Query',
   QueryResult: 'QueryResult',
