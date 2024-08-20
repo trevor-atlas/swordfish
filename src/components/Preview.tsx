@@ -1,40 +1,62 @@
-import { Match, Show, Switch, useContext } from 'solid-js';
-import { StoreContext } from '../store';
 import {
   BROWSER_HISTORY_RESULT,
   CALCULATOR_RESULT,
   FILE_RESULT,
-  FileQueryResult,
 } from '../types';
+import { getSelectedResult } from '../react/reactStore';
+import { ResultPreview } from '../types/ResultPreview';
+
+const isCalculator = (
+  preview: any,
+): preview is Extract<ResultPreview, { type: 'Calculator' }> => {
+  return preview && preview.type === CALCULATOR_RESULT;
+};
+
+const isFile = (
+  preview: any,
+): preview is Extract<ResultPreview, { type: 'File' }> => {
+  return preview && preview.type === FILE_RESULT;
+};
+
+const isBrowserHistory = (
+  preview: any,
+): preview is Extract<ResultPreview, { type: 'BrowserHistory' }> => {
+  return preview && preview.type === BROWSER_HISTORY_RESULT;
+};
 
 export default function Preview() {
-  const [state, { getSelectedResult }] = useContext(StoreContext);
-  const result = () => getSelectedResult();
+  const result = getSelectedResult();
 
   return (
-    <div class="preview-container">
-      <Switch fallback={null}>
-        <Match when={result()?.type === BROWSER_HISTORY_RESULT}>
-          {/* <iframe
-            width="300"
-            height="200"
-            sandbox=""
-            src={state.queryResult.results[state.cursor].subheading}
-            style={{ width: '100%', height: '100%' }}
-          /> */}
-        </Match>
-        <Match when={result()?.type === FILE_RESULT}>
-          <div class="flex flex-col">
-            <div>{(result() as FileQueryResult).preview.filepath}</div>
-            <div>
-              {JSON.stringify((result() as FileQueryResult).preview, null, 2)}
-            </div>
-          </div>
-        </Match>
-        <Match when={result()?.type === CALCULATOR_RESULT}>
-          <div innerHTML={result()?.preview?.parsedContent} />
-        </Match>
-      </Switch>
+    <div className="preview-container">
+      {result && isBrowserHistory(result.preview) && (
+        <iframe
+          width="300"
+          height="200"
+          frameBorder="0"
+          sandbox="allow-scripts allow-same-origin allow-cross-origin"
+          src={result.subheading}
+          referrerPolicy="no-referrer"
+          style={{
+            width: '100%',
+            height: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            border: 0,
+          }}
+        />
+      )}
+      {result && isFile(result.preview) && (
+        <div className="flex flex-col">
+          <div>{result.preview.path}</div>
+          <div>{JSON.stringify(result.preview, null, 2)}</div>
+        </div>
+      )}
+      {result && isCalculator(result.preview) && (
+        <div
+          dangerouslySetInnerHTML={{ __html: result?.preview?.parsedContent }}
+        />
+      )}
     </div>
   );
 }

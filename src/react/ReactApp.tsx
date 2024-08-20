@@ -14,6 +14,8 @@ import {
 import { open } from '@tauri-apps/api/shell';
 import { CALCULATOR_RESULT, FILE_RESULT, Nullable } from '../types';
 import { QueryInput } from './QueryInput';
+import { Chat } from '../components/Chat';
+import Preview from '../components/Preview';
 
 const Loading = () => (
   <div
@@ -187,12 +189,13 @@ function Results() {
       return queryResult.results && queryResult.results.length ? (
         <div className="flex flex-row">
           <ResultList />
+          <Preview />
         </div>
       ) : (
         <Loading />
       );
     case CHAT:
-      return <div>No chat yet</div>;
+      return <Chat />;
     default:
       return <div>No Preview</div>;
   }

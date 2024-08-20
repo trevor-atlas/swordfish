@@ -94,7 +94,12 @@ impl QueryInterface for QueryEngine {
                                 heading: item.title.clone(),
                                 subheading: item.url.clone(),
                                 value: item.url.clone(),
-                                preview: None,
+                                preview: Some(ResultPreview::BrowserHistory {
+                                    url: item.url.clone(),
+                                    image_url: "".to_string(),
+                                    heading: item.title.clone(),
+                                    subheading: item.url.clone(),
+                                }),
                                 icon_path: get_favicon_path(item.url.as_str()),
                                 r#type: QueryResultType::BrowserHistory,
                             })
