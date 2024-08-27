@@ -4,5 +4,7 @@ export type SFEvent =
   | 'MainWindowShown'
   | 'MainWindowHidden'
   | 'MainWindowResized'
+  | 'SettingsWindowShown'
+  | 'SettingsWindowHidden'
   | 'Query'
   | 'QueryResult';

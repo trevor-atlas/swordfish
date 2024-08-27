@@ -58,21 +58,20 @@ impl QueryInterface for QueryEngine {
                         let files_handle = spawn(move || {
                             search(&q, dirs).and_then(|files| {
                                 for item in files.iter() {
-                                    let heading = item.file_name.clone();
                                     let res = QueryResultItem {
-                                        heading: heading.unwrap_or("unnamed file".to_string()),
+                                        heading: item
+                                            .file_name
+                                            .clone()
+                                            .unwrap_or("unnamed file".to_string()),
                                         subheading: item.path.clone(),
                                         value: item.path.clone(),
-                                        icon_path: if item.extension == Some("app".to_string()) {
-                                            match item.file_name {
-                                                Some(ref name) => {
-                                                    get_cached_app_icon_path(name.as_str())
-                                                }
-                                                None => None,
-                                            }
-                                        } else {
-                                            None
-                                        },
+                                        icon_path: (item.extension == Some("app".to_string()))
+                                            .then(|| {
+                                                item.file_name
+                                                    .as_ref()
+                                                    .and_then(|name| get_cached_app_icon_path(name))
+                                            })
+                                            .flatten(),
                                         preview: Some(ResultPreview::File {
                                             path: item.path.clone(),
                                             filename: item.file_name.clone(),
