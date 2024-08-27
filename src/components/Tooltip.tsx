@@ -1,24 +1,32 @@
-import { Show, children, createSignal } from 'solid-js';
+import { useCallback, useState } from 'react';
 
-export function Tooltip(props) {
-  const [showTooltip, setShowTooltip] = createSignal(false);
-  const c = children(() => props.children);
-  const content = children(() => props.content);
+type TooltipProps = {
+  title: string;
+  content: string;
+  children: () => any;
+};
+
+export function Tooltip({ title, content }: TooltipProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const onEnter = useCallback(() => setShowTooltip(true), []);
+  const onLeave = useCallback(() => setShowTooltip(false), []);
 
   return (
     <div
       role="tooltip"
-      class="relative"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
+      className="relative"
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
     >
-      <Show when={showTooltip()}>
-        <div class="tooltip bottom-12 z-10 absolute inline-block px-3 py-2 text-sm font-medium text-white duration-300 bg-gray-900 rounded-lg shadow-sm dark:bg-gray-700">
-          {content()}
-          <div class="tooltip-arrow" />
-        </div>
-      </Show>
-      {c()}
+      {showTooltip && (
+        <>
+          <div className="tooltip bottom-12 z-10 absolute inline-block px-3 py-2 text-sm font-medium text-white duration-300 bg-gray-900 rounded-lg shadow-sm dark:bg-gray-700">
+            {title}
+            <div className="tooltip-arrow" />
+          </div>
+          {content}
+        </>
+      )}
     </div>
   );
 }

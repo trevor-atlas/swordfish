@@ -1,21 +1,20 @@
 import { getSelectedResult, openResult, useStore } from './reactStore';
-import { Nullable } from '../types';
+import { CALCULATOR_RESULT, Nullable } from '../types';
 import { convertFileSrc } from '@tauri-apps/api/tauri';
 import { MouseEventHandler, useCallback, useRef } from 'react';
+import { QueryResultItem } from '../types/QueryResultItem';
 
-interface ResultProps {
-  iconPath: Nullable<string>;
-  heading: string;
-  subtext: string;
+type ResultProps = {
   index: number;
-}
+} & QueryResultItem;
 
 const lastMousePos = { x: 0, y: 0 };
 
 export default function SearchResult({
   heading,
-  subtext,
+  subheading,
   iconPath,
+  type,
   index,
 }: ResultProps) {
   const { cursor, setCursor } = useStore();
@@ -63,7 +62,14 @@ export default function SearchResult({
           )}
           <div className="flex flex-col">
             <span className="result-heading">{heading || <NoTitle />}</span>
-            <span className="result-subtext">{subtext}</span>
+            {type === CALCULATOR_RESULT ? (
+              <div
+                className="calculator"
+                dangerouslySetInnerHTML={{ __html: subheading }}
+              />
+            ) : (
+              <span className="result-subtext">{subheading}</span>
+            )}
             <KeyboardShortcuts />
           </div>
         </div>

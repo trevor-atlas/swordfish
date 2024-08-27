@@ -63,7 +63,10 @@ pub enum ResultPreview {
         path: String,
         filename: Option<String>,
         extension: Option<String>,
+        #[serde(rename = "fileType")]
+        file_type: String,
         size: String,
+        #[serde(rename = "lastModified")]
         last_modified: Option<String>,
         content: String,
         #[serde(rename = "parsedContent")]
@@ -78,6 +81,7 @@ pub enum ResultPreview {
     },
     Script {
         path: String,
+        #[serde(rename = "lastModified")]
         last_modified: String,
         language: String,
         content: String,

@@ -1,21 +1,23 @@
-import { appWindow } from '@tauri-apps/api/window';
-import '../App.scss';
-import { BROWSER_HISTORY, CHAT, QUERY_MODES, SEARCH } from '../constants';
-import { useInputHandler } from '../hooks/useInputHandler';
-import { getSelectedResult, openResult, useStore } from './reactStore';
-import ResultList from './ResultList';
-import { useCallback, useMemo, useRef } from 'react';
 import { writeText } from '@tauri-apps/api/clipboard';
-import {
-  hide,
-  show_settings_window,
-  toggle_settings_window,
-} from '../invocations';
 import { open } from '@tauri-apps/api/shell';
-import { CALCULATOR_RESULT, FILE_RESULT, Nullable } from '../types';
+import { appWindow } from '@tauri-apps/api/window';
+import { useCallback, useRef } from 'react';
+import '../App.scss';
+import {
+  BROWSER_HISTORY,
+  CHAT,
+  QUERY_MODES,
+  SCRIPTS,
+  SEARCH,
+} from '../constants';
+import { ActionSelector } from '../feature/action-selector/ActionSelector';
+import { Chat } from '../feature/chat/Chat';
+import { useInputHandler } from '../hooks/useInputHandler';
+import { toggle_settings_window } from '../invocations';
 import { QueryInput } from './QueryInput';
-import { Chat } from '../components/Chat';
-import Preview from '../components/Preview';
+import ResultList from './ResultList';
+import { getSelectedResult, openResult, useStore } from './reactStore';
+import Details from '../feature/details/Details';
 
 const Loading = () => (
   <div
@@ -25,25 +27,6 @@ const Loading = () => (
     }}
   />
 );
-
-function ActionSelector() {
-  const { mode } = useStore();
-  const actions = QUERY_MODES.map((str) => ({
-    title: str,
-  }));
-  return (
-    <div className="action-selector">
-      {actions.map((item) => (
-        <div
-          key={item.title}
-          className={`${QUERY_MODES[mode] === item.title && 'active'} action `}
-        >
-          <span>{item.title}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 await appWindow.onFocusChanged(async ({ payload: focused }) => {
   if (!focused) {
@@ -176,28 +159,27 @@ function App() {
       <QueryInput inputRef={inputRef} />
       <ActionSelector />
       <Results />
-      <pre>{JSON.stringify(useStore.getState(), null, 2)}</pre>
+      {/* <pre>{JSON.stringify(useStore.getState(), null, 2)}</pre> */}
     </div>
   );
 }
 
 function Results() {
-  const { mode, queryResult } = useStore();
+  const { mode } = useStore();
   switch (QUERY_MODES[mode]) {
     case SEARCH:
     case BROWSER_HISTORY:
-      return queryResult.results && queryResult.results.length ? (
-        <div className="flex flex-row">
+    case SCRIPTS:
+      return (
+        <div className="detail-container">
           <ResultList />
-          <Preview />
+          <Details />
         </div>
-      ) : (
-        <Loading />
       );
     case CHAT:
       return <Chat />;
     default:
-      return <div>No Preview</div>;
+      throw new Error('Invalid mode') as never;
   }
 }
 
