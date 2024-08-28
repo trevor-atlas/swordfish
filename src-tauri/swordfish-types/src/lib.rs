@@ -274,7 +274,7 @@ impl FromStr for FileType {
     }
 }
 
-#[derive(TS, Serialize, Deserialize, Debug, Clone)]
+#[derive(TS, Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[ts(export, export_to = "../../../src/types/")]
 pub enum FileType {
     File,

@@ -17,7 +17,12 @@ tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
 swordfish-types = { path = "./swordfish-types" }
-tauri = { version = "1.6", features = [ "api-all", "system-tray", "global-shortcut", "macos-private-api"] }
+tauri = { version = "1.6", features = [
+    "api-all",
+    "system-tray",
+    "global-shortcut",
+    "macos-private-api",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 fend-core = "1.4"
@@ -35,17 +40,15 @@ dirs-sys = "0.4"
 regex = "1.10"
 chrono = "0.4"
 reqwest = { version = "0.12", features = ["json"] }
-tokio = {version = "1.37", features = ["full"] }
+tokio = { version = "1.37", features = ["full"] }
 plist = "1.6"
 icns = "0.3.1"
 zmq = "0.10.0"
 rayon = "1.10.0"
 globset = "0.4.14"
 tracing = "0.1.40"
-tree-sitter-highlight = "^0.22"
-tree-sitter-javascript = "0.21"
-tree-sitter-typescript = {version = "0.21.2", path="/Users/atlas/repos/tree-sitter-typescript" }
 v_htmlescape = "0.15"
+fuzzy-matcher = "0.3.7"
 
 
 [features]
