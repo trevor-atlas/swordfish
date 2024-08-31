@@ -10,7 +10,8 @@ use tauri::{api::file, utils::config::parse};
 
 use crate::settings::AppConfig;
 use swordfish_types::{
-    DataSource, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType, ResultPreview,
+    DataSource, FileInfo, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType,
+    ResultPreview,
 };
 
 use crate::{
@@ -24,44 +25,42 @@ pub trait QueryInterface {
     fn query(&self, query: Query) -> QueryResult;
 }
 
-pub struct QueryEngine {}
+pub struct QueryEngine {
+    browser_history: BrowserHistoryDataSource,
+    file_data: FileDataSource,
+}
 
 fn is_empty_query(query: &Query) -> bool {
     query.search_string.is_empty() || query.search_string.trim().is_empty()
 }
 
-fn search_files(q: &Query, dirs: Vec<String>, tx: mpsc::Sender<QueryResultItem>) {
-    search(q, dirs).and_then(|files| {
-        for item in files.iter() {
-            let res = QueryResultItem {
-                heading: item.file_name.clone().unwrap_or("unnamed file".to_string()),
-                subheading: item.path.clone(),
-                value: item.path.clone(),
-                icon_path: (item.extension == Some("app".to_string()))
-                    .then(|| {
-                        item.file_name
-                            .as_ref()
-                            .and_then(|name| get_cached_app_icon_path(name))
-                    })
-                    .flatten(),
-                preview: Some(ResultPreview::File {
-                    path: item.path.clone(),
-                    filename: item.file_name.clone(),
-                    extension: item.extension.clone(),
-                    file_type: item.file_type.clone(),
-                    size: item.size.to_string(),
-                    last_modified: item.last_modified.and_then(|i| Some(i.to_string())),
-                    content: "".to_string(),
-                    parsed_content: Some("".to_string()),
-                }),
-                r#type: QueryResultType::File,
-            };
-            tx.send(res).unwrap_or_else(|e| {
-                println!("Error sending history item: {}", e);
-            });
-        }
-        Some(files)
-    });
+fn search_files(results: Vec<FileInfo>) -> Vec<QueryResultItem> {
+    results
+        .iter()
+        .map(|item| QueryResultItem {
+            heading: item.file_name.clone().unwrap_or("unnamed file".to_string()),
+            subheading: item.path.clone(),
+            value: item.path.clone(),
+            icon_path: (item.extension == Some("app".to_string()))
+                .then(|| {
+                    item.file_name
+                        .as_ref()
+                        .and_then(|name| get_cached_app_icon_path(name))
+                })
+                .flatten(),
+            preview: Some(ResultPreview::File {
+                path: item.path.clone(),
+                filename: item.file_name.clone(),
+                extension: item.extension.clone(),
+                file_type: item.file_type.clone(),
+                size: item.size.to_string(),
+                last_modified: item.last_modified.and_then(|i| Some(i.to_string())),
+                content: "".to_string(),
+                parsed_content: Some("".to_string()),
+            }),
+            r#type: QueryResultType::File,
+        })
+        .collect()
 }
 
 fn search_browser_history(q: &Query, tx: mpsc::Sender<QueryResultItem>) {
@@ -90,9 +89,12 @@ fn search_browser_history(q: &Query, tx: mpsc::Sender<QueryResultItem>) {
 
 impl QueryInterface for QueryEngine {
     fn new() -> Self {
-        BrowserHistoryDataSource::update_cache();
-        FileDataSource::update_cache();
-        Self {}
+        let browser_history = BrowserHistoryDataSource::new();
+        let file_data = FileDataSource::new();
+        Self {
+            browser_history,
+            file_data,
+        }
     }
 
     fn query(&self, query: Query) -> QueryResult {
@@ -108,25 +110,12 @@ impl QueryInterface for QueryEngine {
                     return QueryResult { results: vec![] };
                 }
 
-                let (tx, rx) = mpsc::channel();
-                let q = query.clone();
-
-                let settings = AppConfig::new();
-                match settings.get_search_directories() {
-                    None => QueryResult { results: vec![] },
-                    Some(dirs) => {
-                        let files_handle = spawn(move || {
-                            search_files(&q, dirs, tx);
-                        });
-
-                        files_handle.join().unwrap();
-
-                        while let Ok(i) = rx.recv() {
-                            results.push(i.clone());
-                        }
-
-                        QueryResult { results }
+                if let Some(dirs) = self.file_data.query(&query) {
+                    QueryResult {
+                        results: search_files(dirs),
                     }
+                } else {
+                    QueryResult { results: vec![] }
                 }
             }
             QueryMode::BrowserHistory => {

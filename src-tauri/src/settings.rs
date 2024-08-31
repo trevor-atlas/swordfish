@@ -33,36 +33,21 @@ fn get_default_search_directories() -> Vec<String> {
         vec![
             format!("{}\\Desktop", home_path),
             format!("{}\\Downloads", home_path),
+            "C:\\Program Files",
+            "C:\\Program Files (x86)",
+        ]
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        vec![
+            "/usr/share/applications",
+            "/usr/local/share/applications",
+            "/usr/bin",
+            "/usr/sbin",
         ]
     }
 }
-
-// builder pattern example
-
-// struct Something {
-//     field1: String,
-//     field2: String,
-//     field3: String,
-// }
-
-// impl<T> Something<T> {
-//     pub fn new() -> Self { /*code*/
-//     }
-//
-//     pub fn field1(self, field_value: T) -> Self {
-//         Something {
-//             field1: field_value,
-//             ..self
-//         }
-//     }
-//
-//     pub fn field2(self, field_value: T) -> Self {
-//         Something {
-//             field2: field_value,
-//             ..self
-//         }
-//     }
-// }
 
 impl AppConfig {
     pub fn new() -> Self {
@@ -74,20 +59,19 @@ impl AppConfig {
     }
 
     pub fn get_search_directories(&self) -> Option<Vec<String>> {
-        home_dir().and_then(|path| match path.to_str() {
-            Some(path) => Some(
+        home_dir().and_then(|path| {
+            path.to_str().map(|path| {
                 self.search_directories
                     .iter()
                     .map(|dir| {
                         if dir.starts_with("~") {
-                            return dir.replace("~", path);
+                            dir.replace("~", path)
                         } else {
-                            return dir.to_string();
+                            dir.to_string()
                         }
                     })
-                    .collect(),
-            ),
-            None => None,
+                    .collect()
+            })
         })
     }
 
@@ -110,7 +94,7 @@ impl AppConfig {
                 }
             })
             .and_then(|fcontent| {
-                if let Ok(config) = self.from_toml(fcontent) {
+                if let Ok(config) = self.from_json(fcontent) {
                     Some(config)
                 } else {
                     None
@@ -128,7 +112,7 @@ impl AppConfig {
                     return None;
                 }
             })
-            .and_then(|mut file| match self.to_toml() {
+            .and_then(|mut file| match self.to_json() {
                 Ok(file_content) => {
                     if file.write_all(file_content.as_bytes()).is_ok() {
                         Some(self.clone())
@@ -144,20 +128,11 @@ impl AppConfig {
             .unwrap_or(self.clone())
     }
 
-    // pub fn from_json(&self, f: String) -> Result<Self, serde_json::Error> {
-    //     serde_json::from_str(&f)
-    // }
-
-    // pub fn to_json(&self) -> serde_json::Result<String> {
-    //     serde_json::to_string_pretty(self)
-    // }
-
-    pub fn to_toml(&self) -> Result<String, toml::ser::Error> {
-        toml::to_string_pretty(self)
+    pub fn from_json(&self, f: String) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(&f)
     }
 
-    pub fn from_toml(&self, f: String) -> Result<Self, toml::de::Error> {
-        let me: Self = toml::from_str(&f)?;
-        Ok(me)
+    pub fn to_json(&self) -> serde_json::Result<String> {
+        serde_json::to_string_pretty(self)
     }
 }

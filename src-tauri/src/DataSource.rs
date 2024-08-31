@@ -12,7 +12,7 @@ impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
         Self { last_updated: 0 }
     }
 
-    fn update_cache() {
+    fn update_cache(&mut self) {
         let (tx, rx) = mpsc::channel();
         tokio::spawn(async move {
             let result = collate_browser_history_data();

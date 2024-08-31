@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 pub trait DataSource<T> {
     fn new() -> Self;
-    fn update_cache();
+    fn update_cache(&mut self);
     fn query(&self, query: &Query) -> Option<T>;
 }
 

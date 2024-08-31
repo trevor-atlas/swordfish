@@ -13,14 +13,13 @@ mod windows;
 
 use crate::{
     tray::{handle_tray_event, make_tray},
-    utilities::cache_all_app_icons,
     windows::{
         acquire_main_window, acquire_settings_window, hide_main_window, hide_settings_window,
         show_main_window, show_settings_window, toggle_main_window, toggle_settings_window,
     },
 };
 use query_engine::{QueryEngine, QueryInterface};
-use search::filename::cache_application_paths;
+use search::filename::SFCache;
 use settings::AppConfig;
 use std::{env, sync::Mutex};
 use swordfish_types::SFEvent;
@@ -66,8 +65,8 @@ struct AppState {
 }
 #[tokio::main]
 async fn main() {
-    let query_engine = QueryEngine::new();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
+    let query_engine = QueryEngine::new();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -110,7 +109,6 @@ async fn main() {
                     }
                 }
             });
-            cache_application_paths();
 
             Ok(())
         })

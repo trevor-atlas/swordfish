@@ -1,4 +1,4 @@
-use dirs::{cache_dir, home_dir};
+use dirs::{cache_dir, data_dir, home_dir};
 use glob::glob;
 use icns::{IconFamily, IconType};
 use plist::Value;
@@ -6,12 +6,23 @@ use std::{
     env,
     fs::{self, File},
     io::{BufReader, BufWriter},
-    path::{PathBuf},
+    path::PathBuf,
     thread,
 };
 use url::Url;
 
 const APP_NAME: &str = "swordfish";
+
+pub fn get_data_path() -> Option<PathBuf> {
+    data_dir().and_then(|mut dir| {
+        dir.push(APP_NAME);
+        if let Err(e) = fs::create_dir_all(&dir) {
+            eprintln!("Failed to create directory: {}", e);
+            return None;
+        }
+        Some(dir)
+    })
+}
 
 pub fn get_cache_path() -> Option<PathBuf> {
     cache_dir().and_then(|mut dir| {
@@ -20,7 +31,7 @@ pub fn get_cache_path() -> Option<PathBuf> {
             eprintln!("Failed to create directory: {}", e);
             return None;
         }
-        return Some(dir);
+        Some(dir)
     })
 }
 
@@ -31,19 +42,19 @@ pub fn get_app_icon_cache_path() -> Option<PathBuf> {
             eprintln!("Failed to create directory: {}", e);
             return None;
         }
-        return Some(dir);
+        Some(dir)
     })
 }
 
 pub fn get_cached_app_icon_path(app_name: &str) -> Option<String> {
     match get_app_icon_cache_path() {
-        None => return None,
+        None => None,
         Some(mut path) => {
             path.push(format!("{}.png", app_name));
             if path.exists() {
-                return Some(path.to_string_lossy().to_string());
+                Some(path.to_string_lossy().to_string())
             } else {
-                return None;
+                None
             }
         }
     }
@@ -56,7 +67,7 @@ pub fn get_favicon_cache_path() -> Option<PathBuf> {
             eprintln!("Failed to create directory: {}", e);
             return None;
         }
-        return Some(dir);
+        Some(dir)
     })
 }
 
@@ -103,7 +114,7 @@ pub fn config_dir() -> Option<PathBuf> {
 
 pub fn config_filepath() -> Option<PathBuf> {
     config_dir().and_then(|mut dir| {
-        dir.push("config.toml");
+        dir.push("config.json");
         Some(dir)
     })
 }
@@ -141,7 +152,7 @@ pub fn cache_app_icon_path(app_bundle_path: &str, app_name: &str) -> Option<Path
         let path = PathBuf::from(&icon_path);
         if path.exists() {
             if let Ok(metadata) = path.clone().metadata() {
-                if metadata.len() <= 0 {
+                if metadata.len() == 0 {
                     std::fs::remove_file(path.clone()).ok().unwrap_or(());
                     return None;
                 }
@@ -161,9 +172,6 @@ pub fn cache_app_icon_path(app_bundle_path: &str, app_name: &str) -> Option<Path
         .as_dictionary()?
         .get("CFBundleIconFile")
         .and_then(Value::as_string)?;
-    if app_name == "Notion" {
-        println!("icon_file_name is {:?}", &icon_file_name);
-    }
     // macOS does not require the extension for .icns files in the Info.plist.
     // Ensure it has the .icns extension.
     let icon_file_name = if icon_file_name.ends_with(".icns") {

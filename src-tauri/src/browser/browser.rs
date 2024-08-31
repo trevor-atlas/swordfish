@@ -2,6 +2,7 @@ use chrono::Local;
 use chrono::Months;
 use dirs::{data_dir, home_dir};
 use glob::glob;
+use rusqlite::DatabaseName;
 use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -329,7 +330,39 @@ pub fn get_collated_db_connection() -> Result<Connection, BrowserHistoryCollatio
     };
 
     Ok(match Connection::open(&collated_db_location) {
-        Ok(con) => con,
+        Ok(conn) => {
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "journal_mode",
+                "WAL",
+            );
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "busy_timeout",
+                5000,
+            );
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "synchronous",
+                "NORMAL",
+            );
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "cache_size",
+                -20000,
+            );
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "foreign_keys",
+                true,
+            );
+            conn.pragma_update(
+                Some(DatabaseName::Attached("history")),
+                "temp_store",
+                "memory",
+            );
+            conn
+        }
         Err(e) => {
             println!(
                 "Error connecting to \"{}\" db: {:?}",
