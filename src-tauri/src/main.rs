@@ -20,6 +20,7 @@ use crate::{
     },
 };
 use query_engine::{QueryEngine, QueryInterface};
+use search::filename::cache_application_paths;
 use settings::AppConfig;
 use std::{env, sync::Mutex};
 use swordfish_types::SFEvent;
@@ -109,6 +110,7 @@ async fn main() {
                     }
                 }
             });
+            cache_application_paths();
 
             Ok(())
         })

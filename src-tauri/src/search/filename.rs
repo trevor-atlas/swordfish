@@ -6,13 +6,103 @@ use std::cmp;
 use std::{ffi::OsString, time::Instant};
 use swordfish_types::{DataSource, FileInfo, Query};
 
+use crossbeam_channel;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
 const LIMIT: usize = 300;
+#[derive(Serialize, Deserialize)]
+struct AppCache {
+    paths: HashSet<PathBuf>,
+}
+
+pub fn cache_application_paths() {
+    let start = Instant::now();
+    println!("Starting to cache application paths...");
+
+    let cache_file = "app_paths_cache.json";
+    let paths = Arc::new(Mutex::new(HashSet::new()));
+
+    #[cfg(target_os = "macos")]
+    let directories = ["/Applications", "/System/Applications"];
+
+    #[cfg(target_os = "windows")]
+    let directories = ["C:\\Program Files", "C:\\Program Files (x86)"];
+
+    #[cfg(target_os = "linux")]
+    let directories = ["/usr/share/applications", "/usr/local/share/applications"];
+
+    let mut walker = WalkBuilder::new(directories[0]);
+
+    directories
+        .iter()
+        .skip(1)
+        .fold(&mut walker, |builder, dir| builder.add(dir))
+        .threads(cmp::min(2, num_cpus::get()))
+        .hidden(true)
+        .max_depth(Some(6))
+        .build_parallel()
+        .run(|| {
+            let paths = Arc::clone(&paths);
+            Box::new(move |entry| {
+                use ignore::WalkState;
+
+                if let Ok(entry) = entry {
+                    let path = entry.path().to_owned();
+
+                    #[cfg(target_os = "macos")]
+                    {
+                        if path.extension().map_or(false, |ext| ext == "app") {
+                            paths.lock().unwrap().insert(path);
+                            return WalkState::Continue;
+                        }
+                        if path.to_string_lossy().ends_with("/Contents") {
+                            return WalkState::Skip;
+                        }
+                    }
+
+                    #[cfg(target_os = "windows")]
+                    {
+                        if path.extension().map_or(false, |ext| ext == "exe") {
+                            paths.lock().unwrap().insert(path);
+                        }
+                    }
+
+                    #[cfg(target_os = "linux")]
+                    {
+                        if path.extension().map_or(false, |ext| ext == "desktop") {
+                            paths.lock().unwrap().insert(path);
+                        }
+                    }
+                }
+                WalkState::Continue
+            })
+        });
+
+    let app_cache = AppCache {
+        paths: paths.lock().unwrap().clone(),
+    };
+
+    let file = File::create(cache_file).expect("Failed to create cache file");
+    let writer = BufWriter::new(file);
+    serde_json::to_writer_pretty(writer, &app_cache).expect("Failed to write cache to file");
+
+    println!(
+        "Finished caching {} application paths in {}ms",
+        app_cache.paths.len(),
+        start.elapsed().as_millis()
+    );
+}
 
 pub fn search(query: &Query, directories: Vec<String>) -> Option<Vec<FileInfo>> {
     let search_string = query.search_string.clone();
     let (tx, rx) = crossbeam_channel::unbounded::<(i64, String)>();
     let start = Instant::now();
-    let mut walker = WalkBuilder::new(directories.get(0)?.clone());
+    let mut walker = WalkBuilder::new(directories.first()?);
 
     directories
         .iter()
@@ -24,13 +114,7 @@ pub fn search(query: &Query, directories: Vec<String>) -> Option<Vec<FileInfo>> 
         .run(|| {
             let case_sensitive = search_string.chars().any(|c| c.is_uppercase());
             let search = search_string.clone();
-            // let matcher = if case_sensitive {
-            //     SkimMatcherV2::default()
-            // } else {
-            //     SkimMatcherV2::default().ignore_case()
-            // };
-
-            let matcher = SkimMatcherV2::default().ignore_case();
+            let matcher = SkimMatcherV2::default();
             let tx = tx.clone();
             let mut counter: usize = 0;
             Box::new(move |path_entry| {
@@ -44,6 +128,8 @@ pub fn search(query: &Query, directories: Vec<String>) -> Option<Vec<FileInfo>> 
 
                     let is_app = path.extension() == Some(&OsString::from("app"))
                         && !entry.file_name().is_empty();
+                    let path_str = path.to_string_lossy().to_string();
+
                     #[cfg(target_os = "macos")]
                     {
                         if is_app {
@@ -59,7 +145,8 @@ pub fn search(query: &Query, directories: Vec<String>) -> Option<Vec<FileInfo>> 
                             );
                         }
 
-                        let path_str = path.to_string_lossy().to_string();
+                        // mac apps are technically directories, so we need to make sure we don't
+                        // search inside them.
                         if !is_app
                             && (path.starts_with("/Applications/")
                                 || path.starts_with("/System/Applications/"))
@@ -69,42 +156,30 @@ pub fn search(query: &Query, directories: Vec<String>) -> Option<Vec<FileInfo>> 
                         }
                     }
 
-                    let path_str = if case_sensitive {
-                        path.to_string_lossy().to_string()
-                    } else {
-                        path.to_string_lossy().to_string().to_lowercase()
-                    };
-
                     let mut score = matcher
                         .fuzzy(&path_str, &search, true)
                         .map(|res| res.0)
                         .unwrap_or(0);
 
-                    match path.file_name() {
-                        Some(fname) => {
-                            let file_name_str = if case_sensitive {
-                                fname.to_string_lossy().to_string()
-                            } else {
-                                fname.to_string_lossy().to_string().to_lowercase()
-                            };
-                            let fname_score = matcher
-                                .fuzzy(&file_name_str, &search, true)
-                                .map(|res| res.0)
-                                .unwrap_or(0);
-                            score += fname_score;
-                        }
-                        None => {}
+                    if let Some(fname) = path.file_name() {
+                        let fname_score = matcher
+                            .fuzzy(fname.to_string_lossy().to_string().as_str(), &search, true)
+                            .map(|res| res.0)
+                            .unwrap_or(0);
+                        score += fname_score;
                     }
 
                     if is_app && score > 0 {
+                        // bumping app matches because they're more likely to be relevant
                         score += 10;
                     }
 
-                    if score > 0 && (is_app || !path.is_dir()) {
-                        if tx.send((score, path.to_string_lossy().to_string())).is_ok() {
-                            counter += 1;
-                            return WalkState::Continue;
-                        }
+                    if score > 0
+                        && (is_app || !path.is_dir())
+                        && tx.send((score, path.to_string_lossy().to_string())).is_ok()
+                    {
+                        counter += 1;
+                        return WalkState::Continue;
                     }
                 }
                 WalkState::Continue
