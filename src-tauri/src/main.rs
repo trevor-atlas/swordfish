@@ -2,15 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod browser;
+mod browser_data_source;
 mod constants;
 mod datasource;
+mod file_data_source;
 mod query_engine;
-mod search;
 mod settings;
+mod sqlite;
 mod tray;
 mod utilities;
 mod windows;
-
 use crate::{
     tray::{handle_tray_event, make_tray},
     windows::{
@@ -19,12 +20,11 @@ use crate::{
     },
 };
 use query_engine::{QueryEngine, QueryInterface};
-use search::filename::SFCache;
+use serde_variant::to_variant_name;
 use settings::AppConfig;
 use std::{env, sync::Mutex};
 use swordfish_types::SFEvent;
 use tauri::{App, GlobalShortcutManager, Manager, State};
-use tokio;
 use tracing::{error, info};
 
 fn handle_shortcuts(app: &App) {
@@ -40,10 +40,12 @@ fn handle_shortcuts(app: &App) {
             gsm.register(shortcut.as_str(), move || {
                 if let Ok(bool) = w.is_visible() {
                     if bool {
-                        h.emit_all(SFEvent::MainWindowHidden.as_ref(), ()).ok();
+                        h.emit_all(to_variant_name(&SFEvent::MainWindowHidden).unwrap(), ())
+                            .ok();
                         hide_main_window(h.clone());
                     } else {
-                        h.emit_all(SFEvent::MainWindowShown.as_ref(), ()).ok();
+                        h.emit_all(to_variant_name(&SFEvent::MainWindowShown).unwrap(), ())
+                            .ok();
                         show_main_window(h.clone());
                     }
                 }
@@ -101,14 +103,16 @@ async fn main() {
 
             let handle = app.handle();
 
-            let _id = app_handle.listen_global(SFEvent::Query.as_ref(), move |event| {
-                if let Some(str) = event.payload() {
-                    if let Ok(query) = serde_json::from_str(str) {
-                        let res = query_engine.query(query);
-                        let _ = handle.emit_all(SFEvent::QueryResult.as_ref(), res);
+            let _id =
+                app_handle.listen_global(to_variant_name(&SFEvent::Query).unwrap(), move |event| {
+                    if let Some(str) = event.payload() {
+                        if let Ok(query) = serde_json::from_str(str) {
+                            let res = query_engine.query(query);
+                            let _ = handle
+                                .emit_all(to_variant_name(&SFEvent::QueryResult).unwrap(), res);
+                        }
                     }
-                }
-            });
+                });
 
             Ok(())
         })

@@ -5,8 +5,7 @@ use std::{
 
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
-
-use crate::utilities::config_filepath;
+use swordfish_utilities::config_filepath;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
@@ -19,11 +18,13 @@ fn get_default_search_directories() -> Vec<String> {
     let home_path = home_path
         .to_str()
         .expect("Could convert the home directory path to a string!");
+
     #[cfg(target_os = "macos")]
     {
         vec![
             format!("{}/Desktop", home_path),
             format!("{}/Downloads", home_path),
+            format!("{}/Documents", home_path),
             "/System/Applications".to_string(),
             "/Applications".to_string(),
         ]

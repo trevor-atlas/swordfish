@@ -15,8 +15,6 @@ use thiserror::Error;
 use tokio::spawn;
 use url::Url;
 
-use crate::utilities::get_favicon_cache_path;
-
 use super::history::static_configs::{
     arc_path, brave_path, chrome_path, firefox_path, safari_path,
 };
@@ -382,16 +380,12 @@ pub fn query_collated_db(query: &Query) -> Result<Vec<HistoryEntry>, BrowserHist
         .expect("cant subtract 12 months from current date");
     println!("{:?}", one_year_ago.format("%Y-%m-%d"));
 
-    let query_statement = format!(
+    let query_statement =
         r#"SELECT * FROM history
-            WHERE title LIKE '%{}%'
-                OR url LIKE '%{}%'
-                AND datetime(last_visit_time) >= date('now','-6 months')
+            WHERE datetime(last_visit_time) >= date('now','-6 months')
             GROUP BY url
             ORDER BY frecency_score DESC
-            LIMIT 9"#,
-        query.search_string, query.search_string,
-    );
+            LIMIT 9"#
 
     println!("{:?}", query);
     println!("{}", &query_statement);

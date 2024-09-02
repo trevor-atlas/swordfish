@@ -1,15 +1,16 @@
-use swordfish_types::{DataSource, Query};
-
 use crate::browser::browser::{collate_browser_history_data, query_collated_db, HistoryEntry};
 use std::{sync::mpsc, time::SystemTime};
+use swordfish_types::{DataSource, Query};
 
 pub struct BrowserHistoryDataSource {
-    pub last_updated: u64,
+    name: String,
 }
 
 impl DataSource<Vec<HistoryEntry>> for BrowserHistoryDataSource {
-    fn new() -> Self {
-        Self { last_updated: 0 }
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+        }
     }
 
     fn update_cache(&mut self) {

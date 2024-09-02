@@ -1,24 +1,15 @@
+use fend_core::{FendResult, SpanKind};
 use std::{
-    fs::{self, File},
+    fs::{self},
     sync::mpsc,
     thread::spawn,
 };
-
-use fend_core::{FendResult, SpanKind};
-use serde::Serialize;
-use tauri::{api::file, utils::config::parse};
-
-use crate::settings::AppConfig;
 use swordfish_types::{
-    DataSource, FileInfo, Query, QueryMode, QueryResult, QueryResultItem, QueryResultType,
-    ResultPreview,
+    DataSource, Query, QueryMode, QueryResult, ResultDetails, ResultItem, ResultType,
 };
+use swordfish_utilities::get_favicon_path;
 
-use crate::{
-    datasource::BrowserHistoryDataSource,
-    search::filename::{search, FileDataSource},
-    utilities::{cache_all_app_icons, get_cached_app_icon_path, get_favicon_path},
-};
+use crate::{datasource::BrowserHistoryDataSource, file_data_source::FileDataSource};
 
 pub trait QueryInterface {
     fn new() -> Self;
@@ -34,51 +25,22 @@ fn is_empty_query(query: &Query) -> bool {
     query.search_string.is_empty() || query.search_string.trim().is_empty()
 }
 
-fn search_files(results: Vec<FileInfo>) -> Vec<QueryResultItem> {
-    results
-        .iter()
-        .map(|item| QueryResultItem {
-            heading: item.file_name.clone().unwrap_or("unnamed file".to_string()),
-            subheading: item.path.clone(),
-            value: item.path.clone(),
-            icon_path: (item.extension == Some("app".to_string()))
-                .then(|| {
-                    item.file_name
-                        .as_ref()
-                        .and_then(|name| get_cached_app_icon_path(name))
-                })
-                .flatten(),
-            preview: Some(ResultPreview::File {
-                path: item.path.clone(),
-                filename: item.file_name.clone(),
-                extension: item.extension.clone(),
-                file_type: item.file_type.clone(),
-                size: item.size.to_string(),
-                last_modified: item.last_modified.and_then(|i| Some(i.to_string())),
-                content: "".to_string(),
-                parsed_content: Some("".to_string()),
-            }),
-            r#type: QueryResultType::File,
-        })
-        .collect()
-}
-
-fn search_browser_history(q: &Query, tx: mpsc::Sender<QueryResultItem>) {
-    let hist = BrowserHistoryDataSource::new();
+fn search_browser_history(q: &Query, tx: mpsc::Sender<ResultItem>) {
+    let hist = BrowserHistoryDataSource::new("");
     if let Some(hist_items) = hist.query(q) {
         for item in hist_items.iter() {
-            tx.send(QueryResultItem {
+            tx.send(ResultItem {
                 heading: item.title.clone(),
                 subheading: item.url.clone(),
                 value: item.url.clone(),
-                preview: Some(ResultPreview::BrowserHistory {
+                details: Some(ResultDetails::BrowserHistory {
                     url: item.url.clone(),
                     image_url: "".to_string(),
                     heading: item.title.clone(),
                     subheading: item.url.clone(),
                 }),
                 icon_path: get_favicon_path(item.url.as_str()),
-                r#type: QueryResultType::BrowserHistory,
+                r#type: ResultType::BrowserHistory,
             })
             .unwrap_or_else(|e| {
                 println!("Error sending history item: {}", e);
@@ -89,8 +51,8 @@ fn search_browser_history(q: &Query, tx: mpsc::Sender<QueryResultItem>) {
 
 impl QueryInterface for QueryEngine {
     fn new() -> Self {
-        let browser_history = BrowserHistoryDataSource::new();
-        let file_data = FileDataSource::new();
+        let browser_history = BrowserHistoryDataSource::new("");
+        let file_data = FileDataSource::new("sf_cache");
         Self {
             browser_history,
             file_data,
@@ -98,7 +60,7 @@ impl QueryInterface for QueryEngine {
     }
 
     fn query(&self, query: Query) -> QueryResult {
-        let mut results: Vec<QueryResultItem> = vec![];
+        let mut results: Vec<ResultItem> = vec![];
         if let Some(calculator_result) = get_calculator_result(&query) {
             if calculator_result.heading != query.search_string {
                 results.push(calculator_result);
@@ -112,7 +74,10 @@ impl QueryInterface for QueryEngine {
 
                 if let Some(dirs) = self.file_data.query(&query) {
                     QueryResult {
-                        results: search_files(dirs),
+                        results: dirs
+                            .iter()
+                            .map(|info| ResultItem::from(info.to_owned()))
+                            .collect(),
                     }
                 } else {
                     QueryResult { results: vec![] }
@@ -144,13 +109,13 @@ impl QueryInterface for QueryEngine {
                     };
 
                 return QueryResult {
-                    results: vec![QueryResultItem {
+                    results: vec![ResultItem {
                         heading: "Scripts".to_string(),
                         subheading: "Run scripts".to_string(),
                         value: "Scripts".to_string(),
                         icon_path: None,
-                        r#type: QueryResultType::Script,
-                        preview: Some(ResultPreview::Script {
+                        r#type: ResultType::Script,
+                        details: Some(ResultDetails::Script {
                             path: "/Desktop".to_string(),
                             last_modified: "2024-08-24".to_string(),
                             language: "ts".to_string(),
@@ -164,7 +129,7 @@ impl QueryInterface for QueryEngine {
     }
 }
 
-fn get_calculator_result(query: &Query) -> Option<QueryResultItem> {
+fn get_calculator_result(query: &Query) -> Option<ResultItem> {
     let mut context = fend_core::Context::new();
     if let Ok(fend_result) = fend_core::evaluate(&query.search_string, &mut context) {
         if fend_result.get_main_result().is_empty() {
@@ -173,13 +138,13 @@ fn get_calculator_result(query: &Query) -> Option<QueryResultItem> {
 
         let parsed_result = format_calculator_result(&fend_result);
 
-        return Some(QueryResultItem {
+        return Some(ResultItem {
             heading: fend_result.get_main_result().to_string(),
             subheading: parsed_result,
             value: fend_result.get_main_result().to_string(),
             icon_path: None,
-            r#type: QueryResultType::Calculator,
-            preview: None,
+            r#type: ResultType::Calculator,
+            details: None,
         });
     }
     None
