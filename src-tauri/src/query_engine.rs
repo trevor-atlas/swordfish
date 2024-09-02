@@ -1,15 +1,15 @@
 use fend_core::{FendResult, SpanKind};
-use std::{
-    fs::{self},
-    sync::mpsc,
-    thread::spawn,
-};
+use std::fs::{self};
 use swordfish_types::{
     DataSource, Query, QueryMode, QueryResult, ResultDetails, ResultItem, ResultType,
 };
 use swordfish_utilities::get_favicon_path;
+use tauri::async_runtime::spawn;
 
-use crate::{datasource::BrowserHistoryDataSource, file_data_source::FileDataSource};
+use crate::{
+    browser_data_source::{BrowserHistoryDataSource, HistoryEntry},
+    file_data_source::FileDataSource,
+};
 
 pub trait QueryInterface {
     fn new() -> Self;
@@ -25,34 +25,13 @@ fn is_empty_query(query: &Query) -> bool {
     query.search_string.is_empty() || query.search_string.trim().is_empty()
 }
 
-fn search_browser_history(q: &Query, tx: mpsc::Sender<ResultItem>) {
-    let hist = BrowserHistoryDataSource::new("");
-    if let Some(hist_items) = hist.query(q) {
-        for item in hist_items.iter() {
-            tx.send(ResultItem {
-                heading: item.title.clone(),
-                subheading: item.url.clone(),
-                value: item.url.clone(),
-                details: Some(ResultDetails::BrowserHistory {
-                    url: item.url.clone(),
-                    image_url: "".to_string(),
-                    heading: item.title.clone(),
-                    subheading: item.url.clone(),
-                }),
-                icon_path: get_favicon_path(item.url.as_str()),
-                r#type: ResultType::BrowserHistory,
-            })
-            .unwrap_or_else(|e| {
-                println!("Error sending history item: {}", e);
-            });
-        }
-    }
-}
-
 impl QueryInterface for QueryEngine {
     fn new() -> Self {
-        let browser_history = BrowserHistoryDataSource::new("");
-        let file_data = FileDataSource::new("sf_cache");
+        let mut browser_history = BrowserHistoryDataSource::new("history");
+        let mut file_data = FileDataSource::new("sf_cache");
+        browser_history.update_cache();
+        file_data.update_cache();
+
         Self {
             browser_history,
             file_data,
@@ -87,18 +66,27 @@ impl QueryInterface for QueryEngine {
                 if is_empty_query(&query) {
                     return QueryResult { results: vec![] };
                 }
-                let (tx, rx) = mpsc::channel();
-                let q = query.clone();
-
-                let history_handle = spawn(move || {
-                    search_browser_history(&q, tx);
-                });
-
-                history_handle.join().unwrap();
-                while let Ok(i) = rx.recv() {
-                    results.push(i.clone());
-                }
-                QueryResult { results }
+                self.browser_history
+                    .query(&query)
+                    .map(|entries| QueryResult {
+                        results: entries
+                            .iter()
+                            .map(|item| ResultItem {
+                                heading: item.title.clone(),
+                                subheading: item.url.clone(),
+                                value: item.url.clone(),
+                                details: Some(ResultDetails::BrowserHistory {
+                                    url: item.url.clone(),
+                                    image_url: "".to_string(),
+                                    heading: item.title.clone(),
+                                    subheading: item.url.clone(),
+                                }),
+                                icon_path: get_favicon_path(item.url.as_str()),
+                                r#type: ResultType::BrowserHistory,
+                            })
+                            .collect(),
+                    })
+                    .unwrap_or(QueryResult { results: vec![] })
             }
             QueryMode::Chat => QueryResult { results: vec![] },
             QueryMode::Scripts => {

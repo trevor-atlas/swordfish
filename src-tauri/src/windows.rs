@@ -1,3 +1,4 @@
+use serde_variant::to_variant_name;
 use swordfish_types::SFEvent;
 use tauri::AppHandle;
 
@@ -50,7 +51,7 @@ pub fn toggle_main_window(app: AppHandle) {
 pub fn hide_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
     if let Ok(_) = window.hide() {
-        app.emit_all(SFEvent::SettingsWindowHidden.as_ref(), ())
+        app.emit_all(to_variant_name(&SFEvent::SettingsWindowHidden).unwrap(), ())
             .ok();
         // _ = app.hide();
         // _ = menu_item.set_title("Show");
@@ -62,7 +63,8 @@ pub fn show_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
     if let Ok(_) = window.show() {
         _ = window.set_focus();
-        app.emit_all(SFEvent::SettingsWindowShown.as_ref(), ()).ok();
+        app.emit_all(to_variant_name(&SFEvent::SettingsWindowShown).unwrap(), ())
+            .ok();
     };
 }
 
