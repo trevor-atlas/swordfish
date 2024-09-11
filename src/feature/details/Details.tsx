@@ -31,16 +31,16 @@ const isScript = (
 export default function Details() {
   const result = getSelectedResult();
 
-  if (!result?.preview) {
+  if (!result?.details) {
     return null;
   }
 
-  const preview = result.preview;
+  const preview = result.details;
 
   return (
     <div className="preview-container grow">
       {isFile(preview) ? (
-        <FileDetails preview={preview} />
+        <FileDetails details={preview} />
       ): null}
       {isCalculator(preview) && (
         <div

@@ -117,3 +117,20 @@ pub fn acquire_settings_window(app: &AppHandle) -> tauri::Window {
         .expect("Unable to create searchbar window"),
     }
 }
+
+pub fn get_script_window(app: &AppHandle, ident: &str) -> tauri::Window {
+    match app.get_window(ident) {
+        Some(win) => win,
+        None => WindowBuilder::new(app, ident, WindowUrl::App("script-window.html".into()))
+            .title("")
+            .decorations(false)
+            .accept_first_mouse(false)
+            .transparent(true)
+            .skip_taskbar(true)
+            .disable_file_drop_handler()
+            .inner_size(0.0, 0.0)
+            .visible(true)
+            .build()
+            .expect("Unable to create script window"),
+    }
+}
