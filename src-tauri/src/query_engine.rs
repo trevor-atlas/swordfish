@@ -17,8 +17,7 @@ use swordfish_types::{
     ResultType, SFEvent,
 };
 use swordfish_utilities::get_favicon_path;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Emitter, Listener, Manager};
 use tower::ServiceBuilder;
 
 pub trait QueryInterface {
@@ -71,13 +70,11 @@ impl QueryEngine {
         match input {
             ReceivedEvent::CloseWindow { window_ident } => {
                 println!("Event to close window '{:?}'", window_ident);
-                if let Ok(bool) = w.is_visible() {
-                    if bool {
-                        state
-                            .emit_all(to_variant_name(&SFEvent::MainWindowHidden).unwrap(), ())
-                            .ok();
-                        hide_main_window(state.clone());
-                    }
+                if w.is_visible().is_ok() {
+                    state
+                        .emit(to_variant_name(&SFEvent::MainWindowHidden).unwrap(), ())
+                        .ok();
+                    hide_main_window(state.clone());
                 }
             }
             ReceivedEvent::Query { query } => {

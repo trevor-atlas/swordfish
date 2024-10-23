@@ -2,63 +2,40 @@
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": true
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
   },
-  "package": {
-    "productName": "swordfish",
-    "version": "0.0.0"
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
   },
-  "tauri": {
+  "productName": "swordfish",
+  "mainBinaryName": "swordfish",
+  "version": "0.0.1",
+  "identifier": "com.swordfish.dev",
+  "plugins": { },
+  "app": {
     "macOSPrivateApi": true,
-    "systemTray": {
+    "windows": [],
+    "withGlobalTauri": true,
+    "trayIcon": {
       "iconPath": "icons/32x32.png"
     },
-    "allowlist": {
-      "path": {
-        "all": true
-      },
-      "fs": {
-        "all": true,
-        "scope": ["**"]
-      },
-      "protocol": {
-        "asset": true,
-        "assetScope": ["**"]
-      },
-      "all": true,
-      "clipboard": {
-        "all": true
-      },
-      "globalShortcut": {
-        "all": true
-      },
-      "window": {
-        "all": true
-      },
-      "shell": {
-        "all": true,
-        "execute": true,
-        "sidecar": true,
-        "open": ".*"
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.swordfish.dev",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ]
-    },
     "security": {
+      "assetProtocol": {
+        "scope": [
+          "**"
+        ],
+        "enable": true
+      },
       "csp": null
-    },
-    "windows": []
+    }
   }
 }

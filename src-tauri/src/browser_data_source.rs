@@ -1,9 +1,9 @@
 use crate::sqlite::SQLite;
-use chrono::{Local};
-use fuzzy_matcher::skim::{SkimMatcherV2};
+use chrono::Local;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use glob::glob;
 use rayon::prelude::*;
-use rusqlite::{params};
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::PathBuf;

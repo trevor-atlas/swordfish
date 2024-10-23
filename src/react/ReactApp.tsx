@@ -1,6 +1,6 @@
-import { writeText } from '@tauri-apps/api/clipboard';
-import { open } from '@tauri-apps/api/shell';
-import { appWindow } from '@tauri-apps/api/window';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { open } from '@tauri-apps/plugin-shell';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useCallback, useRef } from 'react';
 import '../App.scss';
 import {
@@ -18,6 +18,8 @@ import { QueryInput } from './QueryInput';
 import ResultList from './ResultList';
 import { getSelectedResult, openResult, useStore } from './reactStore';
 import Details from '../feature/details/Details';
+import {NextUIProvider} from "@nextui-org/react";
+
 
 const Loading = () => (
   <div
@@ -27,6 +29,8 @@ const Loading = () => (
     }}
   />
 );
+
+const appWindow = getCurrentWebviewWindow()
 
 await appWindow.onFocusChanged(async ({ payload: focused }) => {
   if (!focused) {
@@ -154,6 +158,7 @@ function App() {
   useInput(inputRef);
 
   return (
+    <NextUIProvider>
     <div className="search-container">
       <div className="handle draggable-area" data-tauri-drag-region />
       <QueryInput inputRef={inputRef} />
@@ -161,6 +166,7 @@ function App() {
       <Results />
       {/* <pre>{JSON.stringify(useStore.getState(), null, 2)}</pre> */}
     </div>
+    </NextUIProvider>
   );
 }
 

@@ -1,69 +1,55 @@
 use serde_variant::to_variant_name;
 use swordfish_types::SFEvent;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
-use tauri::{utils::config::WindowUrl, window::WindowBuilder, Manager};
+use tauri::{Manager, WebviewWindowBuilder};
 
 use crate::constants::{DEFAULT_HEIGHT, DEFAULT_WIDTH, MAIN_WINDOW_HANDLE, SETTINGS_WINDOW_HANDLE};
 
 #[tauri::command]
 pub fn hide_main_window(app: AppHandle) {
     let window = acquire_main_window(&app);
-    let menu_item = app.tray_handle().get_item("toggle");
-    if let Ok(_) = window.hide() {
-        #[cfg(target_os = "macos")]
-        {
-            // _ = app.hide();
-        }
-        _ = menu_item.set_title("Show");
-    };
+    println!("Hide main window");
+    _ = app.hide();
+    _ = window.hide();
 }
 
 #[tauri::command]
 pub fn show_main_window(app: AppHandle) {
     let window = acquire_main_window(&app);
-    let menu_item = app.tray_handle().get_item("toggle");
-    if let Ok(_) = window.show() {
-        #[cfg(target_os = "macos")]
-        {
-            // _ = app.show();
-        }
+    println!("Show main window");
+    _ = app.show();
+    _ = window.show();
 
-        _ = window.center();
-        _ = window.set_focus();
-        _ = menu_item.set_title("Hide")
-    };
+    _ = window.center();
+    _ = window.set_focus();
 }
 
 #[tauri::command]
 pub fn toggle_main_window(app: AppHandle) {
     let window = acquire_main_window(&app);
-    if let Ok(is_visible) = window.is_visible() {
-        if is_visible {
-            hide_main_window(app)
-        } else {
-            show_main_window(app);
-        }
+    if window.is_visible().unwrap_or(false) {
+        hide_main_window(app)
+    } else {
+        show_main_window(app);
     }
 }
 
 #[tauri::command]
 pub fn hide_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
-    if let Ok(_) = window.hide() {
-        app.emit_all(to_variant_name(&SFEvent::SettingsWindowHidden).unwrap(), ())
+    if window.hide().is_ok() {
+        app.emit(to_variant_name(&SFEvent::SettingsWindowHidden).unwrap(), ())
             .ok();
-        // _ = app.hide();
-        // _ = menu_item.set_title("Show");
     };
 }
 
 #[tauri::command]
 pub fn show_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
-    if let Ok(_) = window.show() {
+    if window.show().is_ok() {
         _ = window.set_focus();
-        app.emit_all(to_variant_name(&SFEvent::SettingsWindowShown).unwrap(), ())
+        app.emit(to_variant_name(&SFEvent::SettingsWindowShown).unwrap(), ())
             .ok();
     };
 }
@@ -71,39 +57,40 @@ pub fn show_settings_window(app: AppHandle) {
 #[tauri::command]
 pub fn toggle_settings_window(app: AppHandle) {
     let window = acquire_settings_window(&app);
-    if let Ok(is_visible) = window.is_visible() {
-        if is_visible {
-            hide_settings_window(app)
-        } else {
-            show_settings_window(app);
-        }
+    if window.is_visible().unwrap_or(false) {
+        hide_settings_window(app)
+    } else {
+        show_settings_window(app);
     }
 }
 
-pub fn acquire_main_window(app: &AppHandle) -> tauri::Window {
-    match app.get_window(MAIN_WINDOW_HANDLE) {
-        Some(win) => win,
-        None => WindowBuilder::new(app, MAIN_WINDOW_HANDLE, WindowUrl::App("app.html".into()))
-            .title("Swordfish")
-            .decorations(false)
-            .accept_first_mouse(true)
-            .visible(false)
-            .transparent(true)
-            .skip_taskbar(true)
-            // .disable_file_drop_handler()
-            .inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
-            .build()
-            .expect("Unable to create searchbar window"),
+pub fn acquire_main_window(app: &tauri::AppHandle) -> tauri::WebviewWindow {
+    match app.get_webview_window(MAIN_WINDOW_HANDLE) {
+        Some(window) => window,
+        None => WebviewWindowBuilder::new(
+            app,
+            MAIN_WINDOW_HANDLE,
+            tauri::WebviewUrl::App("app.html".into()),
+        )
+        .title("Swordfish")
+        .decorations(false)
+        .accept_first_mouse(true)
+        .visible(false)
+        .transparent(true)
+        .skip_taskbar(true)
+        .inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+        .build()
+        .expect("Unable to create searchbar window"),
     }
 }
 
-pub fn acquire_settings_window(app: &AppHandle) -> tauri::Window {
-    match app.get_window(SETTINGS_WINDOW_HANDLE) {
+pub fn acquire_settings_window(app: &tauri::AppHandle) -> tauri::WebviewWindow {
+    match app.get_webview_window(SETTINGS_WINDOW_HANDLE) {
         Some(win) => win,
-        None => WindowBuilder::new(
+        None => WebviewWindowBuilder::new(
             app,
             SETTINGS_WINDOW_HANDLE,
-            WindowUrl::App("settings.html".into()),
+            tauri::WebviewUrl::App("settings.html".into()),
         )
         .title("Swordfish — Settings")
         // .decorations(false)
@@ -115,22 +102,5 @@ pub fn acquire_settings_window(app: &AppHandle) -> tauri::Window {
         .inner_size(750.0, 750.0)
         .build()
         .expect("Unable to create searchbar window"),
-    }
-}
-
-pub fn get_script_window(app: &AppHandle, ident: &str) -> tauri::Window {
-    match app.get_window(ident) {
-        Some(win) => win,
-        None => WindowBuilder::new(app, ident, WindowUrl::App("script-window.html".into()))
-            .title("")
-            .decorations(false)
-            .accept_first_mouse(false)
-            .transparent(true)
-            .skip_taskbar(true)
-            .disable_file_drop_handler()
-            .inner_size(0.0, 0.0)
-            .visible(true)
-            .build()
-            .expect("Unable to create script window"),
     }
 }

@@ -3,10 +3,10 @@ import { LifecycleEvent, NUMERIC, QUERY_MODES } from '../constants';
 import { hide } from '../invocations';
 import { emit, listen } from '@tauri-apps/api/event';
 import { QueryResult } from '../types/QueryResult';
-import { writeText } from '@tauri-apps/api/clipboard';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { Nullable, FILE_RESULT, CALCULATOR_RESULT } from '../types';
 import { QueryResultItem } from '../types/QueryResultItem';
-import { open } from '@tauri-apps/api/shell';
+import { open } from '@tauri-apps/plugin-shell';
 
 type ApplicationState = {
   search_string: string;

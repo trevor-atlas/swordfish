@@ -1,8 +1,9 @@
 import { getSelectedResult, openResult, useStore } from './reactStore';
 import { CALCULATOR_RESULT, Nullable } from '../types';
-import { convertFileSrc } from '@tauri-apps/api/tauri';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { MouseEventHandler, useCallback, useRef } from 'react';
 import { QueryResultItem } from '../types/QueryResultItem';
+import { Avatar } from '@nextui-org/react';
 
 type ResultProps = {
   index: number;
@@ -49,16 +50,11 @@ export default function SearchResult({
       onMouseMove={handleMouseEvent}
       onClick={handleClick}
     >
+
       <div className="result-content">
         <div className="flex items-center">
           {iconPath && (
-            <div className="result-icon-container">
-              <img
-                className="result-icon"
-                src={convertFileSrc(iconPath)}
-                alt="icon"
-              />
-            </div>
+            <Avatar isDisabled src={convertFileSrc(iconPath)} />
           )}
           <div className="flex flex-col">
             <span className="result-heading">{heading || <NoTitle />}</span>
